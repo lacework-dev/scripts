@@ -2,6 +2,8 @@
 # Script to fetch Azure inventory for Lacework sizing.
 # Requirements: az cli, jq
 
+# This script can be run from Azure Cloud Shell.
+
 # Set the initial counts to zero.
 AZURE_VMS=0
 SQL_SERVERS=0
