@@ -3,10 +3,28 @@
 # Requirements: awscli, jq
 
 # Usage: ./lw_aws_inventory.sh
+while getopts ":p:" opt; do
+  case ${opt} in
+    p )
+      AWS_PROFILE=$OPTARG
+      ;;
+    \? )
+      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      exit 1
+      ;;
+    : )
+      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
 
-# Multiple AWS profiles? Make sure you set the correct 
-# profile before running the script. Example:
-# export AWS_PROFILE=myprofile
+if [ -z "$AWS_PROFILE" ]; then
+  echo "Running Lacework inventory against your current profile."
+else
+  echo "Runnning Lacework inventory against profile: $AWS_PROFILE"
+fi
 
 # Set the initial counts to zero.
 EC2_INSTANCES=0
