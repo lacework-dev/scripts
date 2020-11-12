@@ -2,28 +2,36 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
+# You can specify a profile with the -p flag, or get JSON output with the -j flag.
+# Note that the script takes a while to run in large accounts with many resources.
+
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:" opt; do
+while getopts ":jp:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
       ;;
+    j )
+      JSON="true"
+      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
       exit 1
       ;;
   esac
 done
 shift $((OPTIND -1))
 
-if [ -z "$AWS_PROFILE" ]; then
-  echo "Running Lacework inventory against your current profile."
-else
-  echo "Runnning Lacework inventory against profile: $AWS_PROFILE"
+if [ "$JSON" != "true" ]; then
+  if [ -z "$AWS_PROFILE" ]; then
+    echo "Running Lacework inventory against your current profile."
+  else
+    echo "Running Lacework inventory against profile: $AWS_PROFILE"
+  fi
 fi
 
 # Set the initial counts to zero.
@@ -68,9 +76,10 @@ function getNatGateways {
   aws ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
-echo "Starting inventory check."
 for r in $(getRegions); do
-  echo $r
+  if [ "$JSON" != "true" ]; then
+    echo $r
+  fi
   instances=$(getInstances $r)
   EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
 
@@ -90,14 +99,36 @@ for r in $(getRegions); do
   NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
 done
 
-echo "######################################################################"
-echo "Lacework inventory collection complete."
-echo ""
-echo "EC2 Instances:     $EC2_INSTANCES"
-echo "RDS Instances:     $RDS_INSTANCES"
-echo "Redshift Clusters: $REDSHIFT_CLUSTERS"
-echo "v1 Load Balancers: $ELB_V1"
-echo "v2 Load Balancers: $ELB_V2"
-echo "NAT Gateways:      $NAT_GATEWAYS"
-echo "===================="
-echo "Total Resources:   $(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))"
+TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
+
+function textoutput {
+  echo "######################################################################"
+  echo "Lacework inventory collection complete."
+  echo ""
+  echo "EC2 Instances:     $EC2_INSTANCES"
+  echo "RDS Instances:     $RDS_INSTANCES"
+  echo "Redshift Clusters: $REDSHIFT_CLUSTERS"
+  echo "v1 Load Balancers: $ELB_V1"
+  echo "v2 Load Balancers: $ELB_V2"
+  echo "NAT Gateways:      $NAT_GATEWAYS"
+  echo "===================="
+  echo "Total Resources:   $TOTAL"
+}
+
+function jsonoutput {
+  echo "{"
+  echo "  \"ec2\": \"$EC2_INSTANCES\","
+  echo "  \"rds\": \"$RDS_INSTANCES\","
+  echo "  \"redshift\": \"$REDSHIFT_CLUSTERS\","
+  echo "  \"v1_lb\": \"$ELB_V1\","
+  echo "  \"v2_lb\": \"$ELB_V2\","
+  echo "  \"nat_gw\": \"$NAT_GATEWAYS\","
+  echo "  \"total\": \"$TOTAL\""
+  echo "}"
+}
+
+if [ "$JSON" == "true" ]; then
+  jsonoutput
+else
+  textoutput
+fi
