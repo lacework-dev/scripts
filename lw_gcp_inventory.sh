@@ -2,6 +2,8 @@
 # Script to fetch GCP inventory for Lacework sizing.
 # Requirements: gcloud, jq
 
+# This script can be run from Google Cloud Shell.
+
 # Set the initial counts to zero.
 GCE_INSTANCES=0
 GKE_INSTANCES=0
