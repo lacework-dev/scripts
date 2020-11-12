@@ -2,6 +2,12 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
+# Usage: ./lw_aws_inventory.sh
+
+# Multiple AWS profiles? Make sure you set the correct 
+# profile before running the script. Example:
+# export AWS_PROFILE=myprofile
+
 # Set the initial counts to zero.
 EC2_INSTANCES=0
 RDS_INSTANCES=0
