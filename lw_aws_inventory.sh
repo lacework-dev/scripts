@@ -48,7 +48,7 @@ function getRegions {
 
 function getInstances {
   region=$1
-  aws ec2 describe-instances --filters Name=instance-state-name,Values=running --region $r --output json --no-paginate | jq '[.[] | .[] | .Instances] | length'
+  aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
