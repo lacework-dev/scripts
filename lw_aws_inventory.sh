@@ -28,7 +28,8 @@ shift $((OPTIND -1))
 
 if [ "$JSON" != "true" ]; then
   if [ -z "$AWS_PROFILE" ]; then
-    echo "Running Lacework inventory against your current profile."
+    AWS_PROFILE=default
+    echo "Running Lacework inventory against your default profile."
   else
     echo "Running Lacework inventory against profile: $AWS_PROFILE"
   fi
@@ -43,37 +44,37 @@ ELB_V2=0
 NAT_GATEWAYS=0
 
 function getRegions {
-  aws ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws --profile $AWS_PROFILE ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
   region=$1
-  aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
+  aws --profile $AWS_PROFILE ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
   region=$1
-  aws rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
+  aws --profile $AWS_PROFILE rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
 }
 
 function getRedshift {
   region=$1
-  aws redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
+  aws --profile $AWS_PROFILE redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
 }
 
 function getElbv1 {
   region=$1
-  aws elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
+  aws --profile $AWS_PROFILE elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
 }
 
 function getElbv2 {
   region=$1
-  aws elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
+  aws --profile $AWS_PROFILE elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
 }
 
 function getNatGateways {
   region=$1
-  aws ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
+  aws --profile $AWS_PROFILE ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
 for r in $(getRegions); do
