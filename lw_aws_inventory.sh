@@ -26,13 +26,14 @@ while getopts ":jp:" opt; do
 done
 shift $((OPTIND -1))
 
+# If no profile was set, assume default profile
+if [ -z "$AWS_PROFILE" ]; then
+  AWS_PROFILE=default
+fi
+
+# Output this message in text, but not json
 if [ "$JSON" != "true" ]; then
-  if [ -z "$AWS_PROFILE" ]; then
-    AWS_PROFILE=default
-    echo "Running Lacework inventory against your default profile."
-  else
-    echo "Running Lacework inventory against profile: $AWS_PROFILE"
-  fi
+  echo "Running Lacework inventory against profile: $AWS_PROFILE"
 fi
 
 # Set the initial counts to zero.
