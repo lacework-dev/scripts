@@ -44,7 +44,6 @@ function check_encryption () {
   bucket=$1
   aws s3api get-bucket-encryption --bucket $bucket > /dev/null 2>&1
   if [[ $? -ne 0 ]]; then
-    echo "No encryption on the S3 bucket."
     export SSEALGO="None"
   else
     json=$(aws s3api get-bucket-encryption --bucket $bucket)
