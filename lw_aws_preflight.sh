@@ -79,8 +79,3 @@ elif [[ $SSEALGO == "None" ]]; then
   echo "${OK}  No encryption detected on your S3 bucket. You may proceed with Lacework installation."
 fi
 
-
-# echo $CT_ARN
-# echo $TRAIL
-# echo $BUCKET
-echo $SNSTOPIC
