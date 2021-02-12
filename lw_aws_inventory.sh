@@ -5,6 +5,9 @@
 # You can specify a profile with the -p flag, or get JSON output with the -j flag.
 # Note that the script takes a while to run in large accounts with many resources.
 
+
+AWS_PROFILE=default
+
 # Usage: ./lw_aws_inventory.sh
 while getopts ":jp:" opt; do
   case ${opt} in
@@ -25,16 +28,6 @@ while getopts ":jp:" opt; do
   esac
 done
 shift $((OPTIND -1))
-
-# If no profile was set, assume default profile
-if [ -z "$AWS_PROFILE" ]; then
-  AWS_PROFILE=default
-fi
-
-# Output this message in text, but not json
-if [ "$JSON" != "true" ]; then
-  echo "Running Lacework inventory against profile: $AWS_PROFILE"
-fi
 
 # Set the initial counts to zero.
 EC2_INSTANCES=0
