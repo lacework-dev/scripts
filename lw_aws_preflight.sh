@@ -1,5 +1,3 @@
-********************************************
-       Lacework AWS Preflight Check
 #!/bin/bash
 # Preflight check for Lacework AWS integrations
 OK="✅"
@@ -47,7 +45,7 @@ function check_encryption () {
   err=$((aws s3api get-bucket-encryption --bucket $bucket) 2>&1)
   if echo $err | grep -q AccessDenied; then
     export SSEALGO="AccessDenied"
-  elif echo $ERR | grep -q ServerSideEncryptionConfigurationNotFoundError; then
+  elif echo $err | grep -q ServerSideEncryptionConfigurationNotFoundError; then
     export SSEALGO="None"
   else
     json=$(aws s3api get-bucket-encryption --bucket $bucket)
