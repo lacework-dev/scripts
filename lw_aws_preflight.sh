@@ -1,3 +1,16 @@
+********************************************
+       Lacework AWS Preflight Check
+********************************************
+Do you have an existing Cloudtrail in your AWS account? (Y/N) y
+
+Please enter the AWS ARN of your Cloudtrail.
+arn:aws:cloudtrail:us-east-2:504210336532:trail/testtrail
+
+Analyzing...
+✅  Cloudtrail exists and is accessible.
+❌  SNS topic does not exist.
+❌  Unable to access S3 bucket. If your Cloudtrail logs are stored in a different account, please install the Lacework integration there.
+[cloudshell-user@ip-10-0-86-209 ~]$ cat lw_aws_preflight.sh 
 #!/bin/bash
 # Preflight check for Lacework AWS integrations
 OK="✅"
@@ -42,8 +55,10 @@ function get_trail_settings () {
 
 function check_encryption () {
   bucket=$1
-  aws s3api get-bucket-encryption --bucket $bucket > /dev/null 2>&1
-  if [[ $? -ne 0 ]]; then
+  err=$((aws s3api get-bucket-encryption --bucket $bucket) 2>&1)
+  if echo $err | grep -q AccessDenied; then
+    export SSEALGO="AccessDenied"
+  elif echo $ERR | grep -q ServerSideEncryptionConfigurationNotFoundError; then
     export SSEALGO="None"
   else
     json=$(aws s3api get-bucket-encryption --bucket $bucket)
@@ -74,7 +89,8 @@ if [[ $SSEALGO == "aws:kms" ]]; then
   echo "https://support.lacework.com/hc/en-us/articles/360019127414-Integration-with-S3-Buckets-Using-Server-Side-Encryption-with-AWS-KMS-Managed-Keys"
 elif [[ $SSEALGO == "AES256" ]]; then
   echo "${OK}  Amazon S3 key encryption detected on your S3 Bucket. You may proceed with Lacework installation."
+elif [[ $SSEALGO == "AccessDenied" ]]; then
+  echo "${NO}  Unable to access S3 bucket. If your Cloudtrail logs are stored in a different account, please install the Lacework integration there."
 elif [[ $SSEALGO == "None" ]]; then
   echo "${OK}  No encryption detected on your S3 bucket. You may proceed with Lacework installation."
 fi
-
