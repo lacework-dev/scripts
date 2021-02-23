@@ -1,16 +1,5 @@
 ********************************************
        Lacework AWS Preflight Check
-********************************************
-Do you have an existing Cloudtrail in your AWS account? (Y/N) y
-
-Please enter the AWS ARN of your Cloudtrail.
-arn:aws:cloudtrail:us-east-2:504210336532:trail/testtrail
-
-Analyzing...
-✅  Cloudtrail exists and is accessible.
-❌  SNS topic does not exist.
-❌  Unable to access S3 bucket. If your Cloudtrail logs are stored in a different account, please install the Lacework integration there.
-[cloudshell-user@ip-10-0-86-209 ~]$ cat lw_aws_preflight.sh 
 #!/bin/bash
 # Preflight check for Lacework AWS integrations
 OK="✅"
