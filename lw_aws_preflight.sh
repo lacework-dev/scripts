@@ -71,7 +71,7 @@ else
 fi
 
 if [[ $SSEALGO == "aws:kms" ]]; then
-  echo "${WARN}   AWS KMS encryption detected on your S3 Bucket. Please review the docs:"
+  echo "${WARN}  AWS KMS encryption detected on your S3 Bucket. Please review the docs:"
   echo ""
   echo "https://support.lacework.com/hc/en-us/articles/360019127414-Integration-with-S3-Buckets-Using-Server-Side-Encryption-with-AWS-KMS-Managed-Keys"
 elif [[ $SSEALGO == "AES256" ]]; then
