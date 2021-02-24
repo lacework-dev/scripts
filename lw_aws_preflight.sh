@@ -1,5 +1,8 @@
 #!/bin/bash
 # Preflight check for Lacework AWS integrations
+# Requires awscli and jq
+# You can also run this in AWS Cloudshell where these are preinstalled.
+
 OK="✅"
 NO="❌"
 WARN="⚠️"
