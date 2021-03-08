@@ -40,7 +40,7 @@ function get_trail_settings () {
   #echo $json
   export TRAIL=$(echo $json | jq -r '.Trail | .Name')
   export BUCKET=$(echo $json | jq -r '.Trail | .S3BucketName')
-  export SNSTOPIC=$(echo $json | jq -r '.Trail | index ("SnsTopicCT_ARN")')
+  export SNSTOPIC=$(echo $json | jq -r '.Trail | .SnsTopicName')
 }
 
 function check_encryption () {
