@@ -15,9 +15,11 @@ function has_cloudtrail () {
   read -p "Do you have an existing Cloudtrail in your AWS account? (Y/N) " confirm
   if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
     echo ""
-    read -p "$(echo -e 'Please enter the AWS ARN of your Cloudtrail.\n\b')" ct_arn
-    echo ""
-    export CT_ARN=$ct_arn
+    PS3='Please choose the AWS ARN of the Cloudtrail you would like to use: '
+    select ct_arn in $(aws cloudtrail list-trails | jq -r '.Trails[] | .TrailARN'); do
+        export CT_ARN=$ct_arn
+        break;
+    done
   else
     echo ""
     echo "Lacework can create a new AWS Cloudtrail for you."
