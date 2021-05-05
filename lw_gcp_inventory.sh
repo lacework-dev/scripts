@@ -23,8 +23,11 @@ function isComputeEnabled {
   gcloud services list --format json | jq -r '.[] | .name' | grep -q "compute.googleapis.com"
 }
 
+# NOTE - it is technically possible to have a CloudSQL instance without the 
+# sqladmin API enabled; but you cannot check the instance programatically 
+# without the API enabled
 function isCloudSQLEnabled {
-  gcloud services list --format json | jq -r '.[] | .name' | grep -q "sql-component.googleapis.com" 
+  gcloud services list --format json | jq -r '.[] | .name' | grep -q "sqladmin.googleapis.com" 
 }
 
 function getGKEInstances {
@@ -40,11 +43,11 @@ function getSQLInstances {
 }
 
 function getLoadBalancers {
-  gcloud compute url-maps list --format json | jq length
+  gcloud compute forwarding-rules list --format json | jq length
 }
 
 function getGateways {
-  gcloud compute networks list --format json | jq '[.[] | .subnetworks | length] | add'
+  gcloud compute routers list --format json | jq '[.[] | .nats | length] | add'
 }
 
 # Define PROJECT_IDS above to scan a subset of projects. Otherwise we scan
