@@ -44,7 +44,7 @@ function getLoadBalancers {
 }
 
 function getGateways {
-  gcloud compute networks list --format json | jq '[.[] | .subnetworks | length] | add'
+  gcloud compute routers list --format json | jq '[.[] | .nats | length] | add'
 }
 
 # Define PROJECT_IDS above to scan a subset of projects. Otherwise we scan
