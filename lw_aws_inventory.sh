@@ -10,7 +10,7 @@
 AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jpe:" opt; do
+while getopts ":jep:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -22,11 +22,11 @@ while getopts ":jpe:" opt; do
       SKIP_PROFILE="true"
       ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-e] [-j]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-e] [-j]" 1>&2
       exit 1
       ;;
   esac
