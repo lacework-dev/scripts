@@ -3,13 +3,14 @@
 # Requirements: awscli, jq
 
 # You can specify a profile with the -p flag, or get JSON output with the -j flag.
+# You can specify to use environment variables and not specify a profile with -e flag.
 # Note that the script takes a while to run in large accounts with many resources.
 
 
 AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp:" opt; do
+while getopts ":jep:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -17,12 +18,15 @@ while getopts ":jp:" opt; do
     j )
       JSON="true"
       ;;
+    e )
+      SKIP_PROFILE="true"
+      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-e] [-j]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-e] [-j]" 1>&2
       exit 1
       ;;
   esac
@@ -37,38 +41,44 @@ ELB_V1=0
 ELB_V2=0
 NAT_GATEWAYS=0
 
+if [ "x$SKIP_PROFILE" = "xtrue" ]; then
+  AWS_PROFILE_STR=""
+else
+  AWS_PROFILE_STR="--profile $AWS_PROFILE"
+fi
+
 function getRegions {
-  aws --profile $AWS_PROFILE ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws $AWS_PROFILE_STR ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
   region=$1
-  aws --profile $AWS_PROFILE ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
+  aws $AWS_PROFILE_STR ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
   region=$1
-  aws --profile $AWS_PROFILE rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
+  aws $AWS_PROFILE_STR rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
 }
 
 function getRedshift {
   region=$1
-  aws --profile $AWS_PROFILE redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
+  aws $AWS_PROFILE_STR redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
 }
 
 function getElbv1 {
   region=$1
-  aws --profile $AWS_PROFILE elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
+  aws $AWS_PROFILE_STR elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
 }
 
 function getElbv2 {
   region=$1
-  aws --profile $AWS_PROFILE elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
+  aws $AWS_PROFILE_STR elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
 }
 
 function getNatGateways {
   region=$1
-  aws --profile $AWS_PROFILE ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
+  aws $AWS_PROFILE_STR ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
 for r in $(getRegions); do
