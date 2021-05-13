@@ -10,7 +10,7 @@
 AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp:" opt; do
+while getopts ":jpe:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
