@@ -3,7 +3,10 @@
 # Requirements: awscli, jq
 
 # You can specify a profile with the -p flag, or get JSON output with the -j flag.
-# Note that the script takes a while to run in large accounts with many resources.
+# Note:
+# 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
+# there are no spaces between accounts in the list
+# 2. The script takes a while to run in large accounts with many resources, the final count is an aggregation of all resources found.
 
 
 AWS_PROFILE=default
@@ -38,63 +41,60 @@ ELB_V2=0
 NAT_GATEWAYS=0
 
 function getRegions {
-  aws --profile $AWS_PROFILE ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
-  region=$1
-  aws --profile $AWS_PROFILE ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
+  aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
-  region=$1
-  aws --profile $AWS_PROFILE rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
+  aws --profile $profile rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
 }
 
 function getRedshift {
-  region=$1
-  aws --profile $AWS_PROFILE redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
+  aws --profile $profile redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
 }
 
 function getElbv1 {
-  region=$1
-  aws --profile $AWS_PROFILE elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
+  aws --profile $profile elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
 }
 
 function getElbv2 {
-  region=$1
-  aws --profile $AWS_PROFILE elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
+  aws --profile $profile elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
 }
 
 function getNatGateways {
-  region=$1
-  aws --profile $AWS_PROFILE ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
+  aws --profile $profile ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
-for r in $(getRegions); do
-  if [ "$JSON" != "true" ]; then
-    echo $r
-  fi
-  instances=$(getInstances $r)
-  EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
+function calculateInventory {
+  profile=$1
+  for r in $(getRegions); do
+    if [ "$JSON" != "true" ]; then
+      echo $r
+    fi
+    instances=$(getInstances $r $profile)
+    EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
 
-  rds=$(getRDSInstances $r)
-  RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
+    rds=$(getRDSInstances $r $profile)
+    RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
 
-  redshift=$(getRedshift $r)
-  REDSHIFT_CLUSTERS=$(($REDSHIFT_CLUSTERS + $redshift))
+    redshift=$(getRedshift $r $profile)
+    REDSHIFT_CLUSTERS=$(($REDSHIFT_CLUSTERS + $redshift))
 
-  elbv1=$(getElbv1 $r)
-  ELB_V1=$(($ELB_V1 + $elbv1))
+    elbv1=$(getElbv1 $r $profile)
+    ELB_V1=$(($ELB_V1 + $elbv1))
 
-  elbv2=$(getElbv2 $r)
-  ELB_V2=$(($ELB_V2 + $elbv2))
+    elbv2=$(getElbv2 $r $profile)
+    ELB_V2=$(($ELB_V2 + $elbv2))
 
-  natgw=$(getNatGateways $r)
-  NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
+    natgw=$(getNatGateways $r $profile)
+    NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
 done
 
 TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
+}
 
 function textoutput {
   echo "######################################################################"
@@ -121,6 +121,11 @@ function jsonoutput {
   echo "  \"total\": \"$TOTAL\""
   echo "}"
 }
+
+for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+do
+    calculateInventory $PROFILE
+done
 
 if [ "$JSON" == "true" ]; then
   jsonoutput
