@@ -1,7 +1,7 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli
 
-# You can specify a profile with the -p flag, or get JSON output with the -j flag.
+# You can specify a profile with the `-p $PROFILE_NAME` flag, or get JSON output with the `-json $true` flag.
 # Note:
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
@@ -19,9 +19,6 @@ param
     [CmdletBinding()]
     [bool] $v = $false
 )
-
-$AWS_PROFILE=$p
-
 
 if (Get-Command "aws" -ErrorAction SilentlyContinue){
     $aws_installed = $true
@@ -180,10 +177,9 @@ function jsonoutput {
   write-host "}"
 }
 
-# TOOD: figure out if we support this in windows? I have no idea what the format of multiple AWS_PROFILES is...looks like it could be a comma delimiter?
-#foreach ($PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")){
-calculateInventory -profile $AWS_PROFILE
-#}
+foreach ($awsProfile in $($p.Split(",").Trim())){
+    calculateInventory -profile $awsProfile
+}
     
 if ($json -eq $true){
     jsonoutput
