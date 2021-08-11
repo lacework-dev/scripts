@@ -36,8 +36,6 @@ $global:ELB_V1=0
 $global:ELB_V2=0
 $global:NAT_GATEWAYS=0
 
-$TOTAL = 0
-
 function getRegions {
     param(
         $profile
