@@ -22,28 +22,13 @@ param
 
 $AWS_PROFILE=$p
 
-<#
-# Usage: ./lw_aws_inventory.sh
-while getopts ":jp:" opt; do
-  case ${opt} in
-    p )
-      AWS_PROFILE=$OPTARG
-      ;;
-    j )
-      JSON="true"
-      ;;
-    \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
-      exit 1
-      ;;
-    : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
-      exit 1
-      ;;
-  esac
-done
-shift $((OPTIND -1))
-#>
+
+if (Get-Command "aws" -ErrorAction SilentlyContinue){
+    $aws_installed = $true
+}else{
+    # setup aws-cli if not present?
+}
+
 
 # Set the initial counts to zero.
 $global:EC2_INSTANCES=0
@@ -137,31 +122,31 @@ function calculateInventory {
         $rds=$(getRDSInstances -region $r -profile $profile)
         $global:RDS_INSTANCES=$(($global:RDS_INSTANCES + $rds))
         if ($v -eq $true){
-            write-host "Region $r - RDS instance count $instances"
+            write-host "Region $r - RDS instance count $rds"
         }
 
         $redshift=$(getRedshift -region $r -profile $profile)
         $global:REDSHIFT_CLUSTERS=$(($Rglobal:EDSHIFT_CLUSTERS + $redshift))
         if ($v -eq $true){
-            write-host "Region $r - RedShift count $instances"
+            write-host "Region $r - RedShift count $redshift"
         }
 
         $elbv1=$(getElbv1 -region $r -profile $profile)
         $global:ELB_V1=$(($global:ELB_V1 + $elbv1))
         if ($v -eq $true){
-            write-host "Region $r - ELBv1 instance count $instances"
+            write-host "Region $r - ELBv1 instance count $elbv1"
         }
 
         $elbv2=$(getElbv2 -region $r -profile $profile)
         $global:ELB_V2=$(($global:ELB_V2 + $elbv2))
         if ($v -eq $true){
-            write-host "Region $r - ELBv2 instance count $instances"
+            write-host "Region $r - ELBv2 instance count $elbv2"
         }
 
         $natgw=$(getNatGateways -region $r -profile $profile)
         $global:NAT_GATEWAYS=$(($global:NAT_GATEWAYS + $natgw))
         if ($v -eq $true){
-            write-host "Region $r - NAT_GW instance count $instances"
+            write-host "Region $r - NAT_GW instance count $natgw"
         }
     }
 
@@ -194,14 +179,14 @@ function jsonoutput {
   write-host "}"
 }
 
-# TOOD: figure out if we support this? 
+# TOOD: figure out if we support this in windows? I have no idea what the format of multiple AWS_PROFILES is...looks like it could be a comma delimiter?
 #foreach ($PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")){
 calculateInventory -profile $AWS_PROFILE
 #}
     
 if ($JSON -eq $true){
-    write-host jsonoutput
+    jsonoutput
 }else{
-    write-host textoutput
+    textoutput
 }
 
