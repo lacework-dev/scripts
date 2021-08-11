@@ -10,7 +10,7 @@
 param
 (
     [CmdletBinding()]
-    [bool] $j = $false,
+    [bool] $json = $false,
 
     [CmdletBinding()]
     [string] $p = "default",
@@ -27,6 +27,7 @@ if (Get-Command "aws" -ErrorAction SilentlyContinue){
     $aws_installed = $true
 }else{
     # setup aws-cli if not present?
+    throw "aws cli must be installed and configured prior to script execution!"
 }
 
 
@@ -109,8 +110,8 @@ function calculateInventory {
     )
 
     foreach ($r in $(getRegions -profile $profile)){
-        if ($JSON -ne $true){
-            #Write-Host $r
+        if ($json -ne $true){
+            Write-Host $r
         }
 
         $instances=$(getInstances -region $r -profile $profile)
@@ -169,13 +170,13 @@ function textoutput {
 
 function jsonoutput {
   write-host "{"
-  write-host "  \"ec2\": \"$global:EC2_INSTANCES\","
-  write-host "  \"rds\": \"$global:RDS_INSTANCES\","
-  write-host "  \"redshift\": \"$global:REDSHIFT_CLUSTERS\","
-  write-host "  \"v1_lb\": \"$global:ELB_V1\","
-  write-host "  \"v2_lb\": \"$global:ELB_V2\","
-  write-host "  \"nat_gw\": \"$global:NAT_GATEWAYS\","
-  write-host "  \"total\": \"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)\""
+  write-host "  `"ec2`": `"$global:EC2_INSTANCES`","
+  write-host "  `"rds`": `"$global:RDS_INSTANCES`","
+  write-host "  `"redshift`": `"$global:REDSHIFT_CLUSTERS`","
+  write-host "  `"v1_lb`": `"$global:ELB_V1`","
+  write-host "  `"v2_lb`": `"$global:ELB_V2`","
+  write-host "  `"nat_gw`": `"$global:NAT_GATEWAYS`","
+  write-host "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`""
   write-host "}"
 }
 
@@ -184,7 +185,7 @@ function jsonoutput {
 calculateInventory -profile $AWS_PROFILE
 #}
     
-if ($JSON -eq $true){
+if ($json -eq $true){
     jsonoutput
 }else{
     textoutput
