@@ -3,6 +3,15 @@
 # Requirements: az cli
 
 # This script can be run from Azure Cloud Shell.
+param
+(
+    [CmdletBinding()]
+    [bool] $json = $false,
+
+    # enable verbose output
+    [CmdletBinding()]
+    [bool] $v = $false
+)
 
 # Set the initial counts to zero.
 $AZURE_VMS=0
