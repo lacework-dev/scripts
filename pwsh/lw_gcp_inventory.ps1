@@ -24,29 +24,30 @@ $global:SQL_INSTANCES=0
 $global:LOAD_BALANCERS=0
 $global:GATEWAYS=0
 
-
-
 function getProjects {
   $(gcloud projects list --format json | ConvertFrom-Json).projectId
 }
 
 function isComputeEnabled {
-  gcloud services list --format json | jq -r '.[] | .name' | grep -q "compute.googleapis.com"
+  #gcloud services list --format json | jq -r '.[] | .name' | grep -q "compute.googleapis.com"
+  $(gcloud services list --format json | ConvertFrom-Json).name -contains "compute.googleapis.com"
 }
 
 # NOTE - it is technically possible to have a CloudSQL instance without the 
 # sqladmin API enabled; but you cannot check the instance programatically 
 # without the API enabled
 function isCloudSQLEnabled {
-  gcloud services list --format json | jq -r '.[] | .name' | grep -q "sqladmin.googleapis.com" 
+  $(gcloud services list --format json | ConvertFrom-Json).name -contains "sqladmin.googleapis.com" 
 }
 
 function getGKEInstances {
-  gcloud compute instances list --format json | jq '[.[] | select(.name | contains("gke-"))] | length'
+  #gcloud compute instances list --format json | jq '[.[] | select(.name | contains("gke-"))] | length'
+  $((gcloud compute instances list --format json | ConvertFrom-Json).name | Where-Object {$_ -contains "gke-"}).Count
 }
 
 function getGCEInstances {
-  gcloud compute instances list --format json | jq '[.[] | select(.name | contains("gke-") | not)] | length'
+  #gcloud compute instances list --format json | jq '[.[] | select(.name | contains("gke-") | not)] | length'
+  $((gcloud compute instances list --format json | ConvertFrom-Json).name | Where-Object {$_ -notcontains "gke-"}).Count
 }
 
 function getSQLInstances {
@@ -58,7 +59,8 @@ function getLoadBalancers {
 }
 
 function getGateways {
-  gcloud compute routers list --format json | jq '[.[] | .nats | length] | add'
+  #gcloud compute routers list --format json | jq '[.[] | .nats | length] | add'
+  $(gcloud compute routers list --format json | ConvertFrom-Json).nats.Count
 }
 
 # Define PROJECT_IDS above to scan a subset of projects. Otherwise we scan
