@@ -1,0 +1,9 @@
+create resources of all types in AWS
+    - Terraform? 
+- run AWS bash script and assert correct count
+- run AWS pwsh script and assert correct count
+
+rinse and repeat for Azure, GCP
+ensure teardown of resources once complete
+
+no expectation of CI/CD at this time...just enough tools to validate code changes work as expected
