@@ -150,29 +150,29 @@ function calculateInventory {
 }
 
 function textoutput {
-  write-host "######################################################################"
-  write-host "Lacework inventory collection complete."
-  write-host ""
-  write-host "EC2 Instances:     $global:EC2_INSTANCES"
-  write-host "RDS Instances:     $global:RDS_INSTANCES"
-  write-host "Redshift Clusters: $global:REDSHIFT_CLUSTERS"
-  write-host "v1 Load Balancers: $global:ELB_V1"
-  write-host "v2 Load Balancers: $global:ELB_V2"
-  write-host "NAT Gateways:      $global:NAT_GATEWAYS"
-  write-host "===================="
-  write-host "Total Resources:   $($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)"
+  write-output  "######################################################################"
+  write-output "Lacework inventory collection complete."
+  write-output ""
+  write-output "EC2 Instances:     $global:EC2_INSTANCES"
+  write-output "RDS Instances:     $global:RDS_INSTANCES"
+  write-output "Redshift Clusters: $global:REDSHIFT_CLUSTERS"
+  write-output "v1 Load Balancers: $global:ELB_V1"
+  write-output "v2 Load Balancers: $global:ELB_V2"
+  write-output "NAT Gateways:      $global:NAT_GATEWAYS"
+  write-output "===================="
+  write-output "Total Resources:   $($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)"
 }
 
 function jsonoutput {
-  write-host "{"
-  write-host "  `"ec2`": `"$global:EC2_INSTANCES`","
-  write-host "  `"rds`": `"$global:RDS_INSTANCES`","
-  write-host "  `"redshift`": `"$global:REDSHIFT_CLUSTERS`","
-  write-host "  `"v1_lb`": `"$global:ELB_V1`","
-  write-host "  `"v2_lb`": `"$global:ELB_V2`","
-  write-host "  `"nat_gw`": `"$global:NAT_GATEWAYS`","
-  write-host "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`""
-  write-host "}"
+  write-output "{ "
+  write-output  "  `"ec2`": `"$global:EC2_INSTANCES`","
+  write-output  "  `"rds`": `"$global:RDS_INSTANCES`","
+  write-output  "  `"redshift`": `"$global:REDSHIFT_CLUSTERS`","
+  write-output  "  `"v1_lb`": `"$global:ELB_V1`","
+  write-output  "  `"v2_lb`": `"$global:ELB_V2`","
+  write-output  "  `"nat_gw`": `"$global:NAT_GATEWAYS`","
+  write-output  "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`""
+  write-output  "}"
 }
 
 foreach ($awsProfile in $($p.Split(",").Trim())){

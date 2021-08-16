@@ -103,13 +103,13 @@ foreach ($project in $project_ids){
   }
 }
 
-write-host "######################################################################"
-write-host "Lacework inventory collection complete."
-write-host ""
-write-host "GCE Instances:   $global:GCE_INSTANCES"
-write-host "GKE Instances:   $global:GKE_INSTANCES"
-write-host "Load Balancers:  $global:LOAD_BALANCERS"
-write-host "Gateways:        $global:GATEWAYS"
-write-host "SQL Instances:   $global:SQL_INSTANCES"
-write-host "===================="
-write-host "Total Resources: $(($global:GCE_INSTANCES + $global:GKE_INSTANCES + $global:LOAD_BALANCERS + $global:GATEWAYS + $global:SQL_INSTANCES))"
+write-output "######################################################################"
+write-output "Lacework inventory collection complete."
+write-output ""
+write-output "GCE Instances:   $global:GCE_INSTANCES"
+write-output "GKE Instances:   $global:GKE_INSTANCES"
+write-output "Load Balancers:  $global:LOAD_BALANCERS"
+write-output "Gateways:        $global:GATEWAYS"
+write-output "SQL Instances:   $global:SQL_INSTANCES"
+write-output "===================="
+write-output "Total Resources: $(($global:GCE_INSTANCES + $global:GKE_INSTANCES + $global:LOAD_BALANCERS + $global:GATEWAYS + $global:SQL_INSTANCES))"
