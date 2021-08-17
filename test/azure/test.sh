@@ -1,5 +1,5 @@
-#terraform init
-#terraform apply --auto-approve
+terraform init
+terraform apply --auto-approve
 
 bash_results=$(sh ../../bash/lw_azure_inventory.sh) #bash doesn't have json support..yet
 pwsh_results=$(pwsh -c "../../pwsh/lw_azure_inventory.ps1")
@@ -12,4 +12,4 @@ else
     exit 1
 fi
 
-#terraform destroy --auto-approve
+terraform destroy --auto-approve
