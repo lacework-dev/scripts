@@ -122,7 +122,7 @@ function calculateInventory {
         }
 
         $redshift=$(getRedshift -region $r -profile $profile)
-        $global:REDSHIFT_CLUSTERS=$(($Rglobal:EDSHIFT_CLUSTERS + $redshift))
+        $global:REDSHIFT_CLUSTERS=$(($Rglobal:REDSHIFT_CLUSTERS + $redshift))
         if ($v -eq $true){
             write-host "Region $r - RedShift count $redshift"
         }
