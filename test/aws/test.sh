@@ -38,10 +38,8 @@ echo $pwsh_results
 
 if [[ "$bash_results" == "$pwsh_results" ]]; then
     echo "identical results between bash and pwsh!"
-    exit 0
 else
     echo "results do not match!"
-    exit 1
 fi
 
 # cleanup
