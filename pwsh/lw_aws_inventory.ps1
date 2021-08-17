@@ -122,7 +122,7 @@ function calculateInventory {
         }
 
         $redshift=$(getRedshift -region $r -profile $profile)
-        $global:REDSHIFT_CLUSTERS=$(($Rglobal:REDSHIFT_CLUSTERS + $redshift))
+        $global:REDSHIFT_CLUSTERS=$(($global:REDSHIFT_CLUSTERS + $redshift))
         if ($v -eq $true){
             write-host "Region $r - RedShift count $redshift"
         }
@@ -164,7 +164,7 @@ function textoutput {
 }
 
 function jsonoutput {
-  write-output "{ "
+  write-output "{"
   write-output  "  `"ec2`": `"$global:EC2_INSTANCES`","
   write-output  "  `"rds`": `"$global:RDS_INSTANCES`","
   write-output  "  `"redshift`": `"$global:REDSHIFT_CLUSTERS`","

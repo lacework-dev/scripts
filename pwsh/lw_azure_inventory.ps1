@@ -52,12 +52,30 @@ az config set extension.use_dynamic_install=yes_without_prompt
 $GATEWAYS= $(az graph query -q "Resources | where type =~ 'Microsoft.Network/virtualNetworkGateways' | summarize count=count()" | ConvertFrom-Json).data.count
 
 
-write-output "######################################################################"
-write-output "Lacework inventory collection complete."
-write-output ""
-write-output "Azure VMs:         $AZURE_VMS"
-write-output "SQL Servers:       $SQL_SERVERS"
-write-output "Load Balancers:    $LOAD_BALANCERS"
-write-output "Vnet Gateways:     $GATEWAYS"
-write-output "===================="
-write-output "Total Resources:   $(($AZURE_VMS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS))"
+function textoutput {
+  write-output "######################################################################"
+  write-output "Lacework inventory collection complete."
+  write-output ""
+  write-output "Azure VMs:         $AZURE_VMS"
+  write-output "SQL Servers:       $SQL_SERVERS"
+  write-output "Load Balancers:    $LOAD_BALANCERS"
+  write-output "Vnet Gateways:     $GATEWAYS"
+  write-output "===================="
+  write-output "Total Resources:   $(($AZURE_VMS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS))"
+}
+
+function jsonoutput {
+  write-output "{"
+  write-output  "  `"vms`": `"$AZURE_VMS`","
+  write-output  "  `"sqlservers`": `"$SQL_SERVERS`","
+  write-output  "  `"lb`": `"$LOAD_BALANCERS`","
+  write-output  "  `"vnetgw`": `"$GATEWAYS`","
+  Write-output  "  `"total`": `"$($AZURE_VMS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS)`""
+  write-output  "}"
+}
+
+if ($json -eq $true){
+  jsonoutput
+}else{
+  textoutput
+}

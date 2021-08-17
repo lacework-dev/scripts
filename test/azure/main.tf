@@ -81,8 +81,12 @@ resource "azurerm_resource_group" "example" {
   location = "West US"
 }
 
+resource "random_id" "storageaccount" {
+  byte_length = 8
+}
+
 resource "azurerm_storage_account" "example" {
-  name                     = "examplesa"
+  name                     = "${lower(random_id.storageaccount.hex)}"
   resource_group_name      = azurerm_resource_group.example.name
   location                 = azurerm_resource_group.example.location
   account_tier             = "Standard"
@@ -106,7 +110,7 @@ resource "azurerm_mssql_database" "test" {
   max_size_gb    = 4
   read_scale     = true
   sku_name       = "BC_Gen5_2"
-  zone_redundant = true
+  zone_redundant = false
 
   extended_auditing_policy {
     storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint
@@ -122,55 +126,55 @@ resource "azurerm_mssql_database" "test" {
 
 }
 
-resource "azurerm_resource_group" "example" {
+resource "azurerm_resource_group" "example2" {
   name     = "LoadBalancerRG"
   location = "West US"
 }
 
-resource "azurerm_public_ip" "example" {
+resource "azurerm_public_ip" "example2" {
   name                = "PublicIPForLB"
   location            = "West US"
-  resource_group_name = azurerm_resource_group.example.name
+  resource_group_name = azurerm_resource_group.example2.name
   allocation_method   = "Static"
 }
 
-resource "azurerm_lb" "example" {
+resource "azurerm_lb" "example2" {
   name                = "TestLoadBalancer"
   location            = "West US"
-  resource_group_name = azurerm_resource_group.example.name
+  resource_group_name = azurerm_resource_group.example2.name
 
   frontend_ip_configuration {
     name                 = "PublicIPAddress"
-    public_ip_address_id = azurerm_public_ip.example.id
+    public_ip_address_id = azurerm_public_ip.example2.id
   }
 }
 
-resource "azurerm_virtual_network" "example" {
+resource "azurerm_virtual_network" "example2" {
   name                = "test"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example2.location
+  resource_group_name = azurerm_resource_group.example2.name
   address_space       = ["10.0.0.0/16"]
 }
 
-resource "azurerm_subnet" "example" {
+resource "azurerm_subnet" "example2" {
   name                 = "GatewaySubnet"
-  resource_group_name  = azurerm_resource_group.example.name
-  virtual_network_name = azurerm_virtual_network.example.name
+  resource_group_name  = azurerm_resource_group.example2.name
+  virtual_network_name = azurerm_virtual_network.example2.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-resource "azurerm_public_ip" "example" {
+resource "azurerm_public_ip" "example3" {
   name                = "test"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example2.location
+  resource_group_name = azurerm_resource_group.example2.name
 
   allocation_method = "Dynamic"
 }
 
-resource "azurerm_virtual_network_gateway" "example" {
+resource "azurerm_virtual_network_gateway" "example2" {
   name                = "test"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example2.location
+  resource_group_name = azurerm_resource_group.example2.name
 
   type     = "Vpn"
   vpn_type = "RouteBased"
@@ -181,9 +185,9 @@ resource "azurerm_virtual_network_gateway" "example" {
 
   ip_configuration {
     name                          = "vnetGatewayConfig"
-    public_ip_address_id          = azurerm_public_ip.example.id
+    public_ip_address_id          = azurerm_public_ip.example3.id
     private_ip_address_allocation = "Dynamic"
-    subnet_id                     = azurerm_subnet.example.id
+    subnet_id                     = azurerm_subnet.example2.id
   }
 
   vpn_client_configuration {

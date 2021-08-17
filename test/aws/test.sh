@@ -37,11 +37,23 @@ pwsh_results=$(pwsh -c "../../pwsh/lw_aws_inventory.ps1 -json 1")
 echo $pwsh_results
 
 if [[ "$bash_results" == "$pwsh_results" ]]; then
-    echo "identical results!"
+    echo "identical results between bash and pwsh!"
     exit 0
 else
-    echo "results do not match"
+    echo "results do not match!"
     exit 1
 fi
 
-#terraform destroy --auto-approve
+# cleanup
+cd ./terraform-aws-rds/examples/complete-mysql
+terraform destroy --auto-approve
+cd ../../..
+cd ./terraform-aws-ec2-instance/examples/basic
+terraform destroy --auto-approve
+cd ../../..
+cd ./terraform-aws-redshift/examples/complete
+terraform destroy --auto-approve
+cd ../../..
+cd ./terraform-aws-elb/examples/complete
+terraform destroy --auto-approve
+cd ../../..
