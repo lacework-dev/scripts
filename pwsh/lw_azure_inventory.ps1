@@ -45,10 +45,10 @@ $lbs=$(getLoadBalancers)
 $global:LOAD_BALANCERS=$(($global:LOAD_BALANCERS + $lbs))
 
 write-host "Fetching Gateways..."
-#TODO -- replace this with a resource graph query...
 # Microsoft.Network/virtualNetworkGateways
 # need to run this to avoid an interactive prompt to use the resource graph extension
-az config set extension.use_dynamic_install=yes_without_prompt
+# -- dump output to null as it currently warns that "az config" is experimental...
+az config set extension.use_dynamic_install=yes_without_prompt *> $null
 $global:GATEWAYS= $(az graph query -q "Resources | where type =~ 'Microsoft.Network/virtualNetworkGateways' | summarize count=count()" | ConvertFrom-Json).data.count
 
 
