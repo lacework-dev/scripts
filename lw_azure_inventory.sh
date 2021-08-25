@@ -10,6 +10,15 @@ SQL_SERVERS=0
 LOAD_BALANCERS=0
 GATEWAYS=0
 
+function getSubscriptions {
+  az account list | jq -r '.[] | .id'
+}
+
+function setSubscription {
+  SUB=$1
+  az account set --subscription $SUB
+}
+
 function getResourceGroups {
   az group list | jq -r '.[] | .name'
 }
@@ -32,22 +41,29 @@ function getGateways {
 }
 
 echo "Starting inventory check."
-echo "Fetching VMs..."
-vms=$(getVMs)
-AZURE_VMS=$(($AZURE_VMS + $vms))
+echo "Fetching Subscriptions..."
 
-echo "Fetching SQL Databases..."
-sql=$(getSQLServers)
-SQL_SERVERS=$(($SQL_SERVERS + $sql))
+for sub in $(getSubscriptions); do
+  echo "Switching to subscription $sub"
+  setSubscription $sub
 
-echo "Fetching Load Balancers..."
-lbs=$(getLoadBalancers)
-LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
+  echo "Fetching VMs..."
+  vms=$(getVMs)
+  AZURE_VMS=$(($AZURE_VMS + $vms))
 
-echo "Fetching Gateways..."
-for group in $(getResourceGroups); do
-  gw=$(getGateways $group)
-  GATEWAYS=$(($GATEWAYS + $gw))
+  echo "Fetching SQL Databases..."
+  sql=$(getSQLServers)
+  SQL_SERVERS=$(($SQL_SERVERS + $sql))
+
+  echo "Fetching Load Balancers..."
+  lbs=$(getLoadBalancers)
+  LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
+
+  echo "Fetching Gateways..."
+  for group in $(getResourceGroups); do
+    gw=$(getGateways $group)
+    GATEWAYS=$(($GATEWAYS + $gw))
+  done
 done
 
 echo "######################################################################"
