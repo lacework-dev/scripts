@@ -62,8 +62,13 @@ mv results results.json
 
 count=$(cat results.json | jq -r '.MetricDataResults[].Values' | awk '{sum+=$0} END{print sum}')
 clear
-echo ""
-echo "We have counted a total of "$count "lambda invocations."
-echo ""
-echo "Thanks for using the Lacework AWS serverless call counter!"
-echo ""
+echo "##################################################################"
+echo "#                                                                #"
+echo "#                                                                #"
+echo "     We have counted a total of "$count "lambda invocations.     "
+echo "#                                                                #"
+echo "#                                                                #"
+echo "#  Thanks for using the Lacework AWS serverless call counter!    #"
+echo "#                                                                #"
+echo "#                                                                #"
+echo "##################################################################"
