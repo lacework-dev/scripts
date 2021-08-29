@@ -25,6 +25,12 @@ echo ""
 echo "The number of times $function_name was call between $start_time and $end_time is.."
 
 touch results
+touch files.txt
+
+for f in $(aws lambda list-functions --output json --no-paginate | jq -r '.Functions[].FunctionName')
+do
+  echo $".json" >> files.txt
+done
 
 for f in $(aws lambda list-functions --output json --no-paginate | jq -r '.Functions[].FunctionName')
 do
@@ -57,7 +63,11 @@ do
 aws cloudwatch get-metric-data --metric-data-queries file://$l --start-time $start_time --end-time $end_time --region $region --profile $profile >> results
 done
 
-rm -rf *.json
+for f in $(cat files.txt)
+do
+rm -rf $f
+done
+
 mv results results.json
 
 count=$(cat results.json | jq -r '.MetricDataResults[].Values' | awk '{sum+=$0} END{print sum}')
