@@ -29,7 +29,7 @@ touch files.txt
 
 for f in $(aws lambda list-functions --output json --no-paginate | jq -r '.Functions[].FunctionName')
 do
-  echo $".json" >> files.txt
+  echo $f".json" >> files.txt
 done
 
 for f in $(aws lambda list-functions --output json --no-paginate | jq -r '.Functions[].FunctionName')
@@ -67,7 +67,7 @@ for f in $(cat files.txt)
 do
 rm -rf $f
 done
-
+rm files.txt
 mv results results.json
 
 count=$(cat results.json | jq -r '.MetricDataResults[].Values' | awk '{sum+=$0} END{print sum}')
