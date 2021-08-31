@@ -2,7 +2,6 @@
 # Pre-requisits install the aws cli  - instructions are here https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
 # Set up aws credentials as per https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html
 # install and add jq to your path as per https://github.com/stedolan/jq/wiki/Installation
-#
 # Please amend the region and profile to suit your environment. If using no profile, please set to "default"
 # Region is a required field
 
