@@ -12,16 +12,12 @@ end_time=$(date +%s)
 start_time=$(($end_time - $his))
 temp_json_file=temp.json
 final_json_file=final.json
+start_time_hr=$(date -r $start_time)
+end_time_hr=$(date -r $end_time)
 
 #
 # End of user parameters
 #
-
-echo ""
-echo "Welcome to the Lacework AWS serverless call counter"
-echo "=================================================="
-echo ""
-echo "The number of times $function_name was call between $start_time and $end_time is.."
 
 touch results
 touch files.txt
@@ -35,7 +31,7 @@ for f in $(aws lambda list-functions --output json --no-paginate | jq -r '.Funct
 do
 touch $f.json
 cat << EOF >> $f.json
-[
+"[
    {
       "Id": "m2",
     	"MetricStat": {
@@ -52,14 +48,14 @@ cat << EOF >> $f.json
     	},
     	"ReturnData": true
     }
-]
+]"
 EOF
 cat $f.json
 done
 
-for l in $(ls *.json)
+for l in $(aws lambda list-functions --output json --no-paginate | jq -r '.Functions[].FunctionName')
 do
-aws cloudwatch get-metric-data --metric-data-queries file://$l --start-time $start_time --end-time $end_time --region $region --profile $profile >> results
+aws cloudwatch get-metric-data --metric-data-queries file://$l.json --start-time $start_time --end-time $end_time --region $region --profile $profile >> results
 done
 
 for f in $(cat files.txt)
@@ -71,13 +67,11 @@ mv results results.json
 
 count=$(cat results.json | jq -r '.MetricDataResults[].Values' | awk '{sum+=$0} END{print sum}')
 clear
-echo "##################################################################"
-echo "#                                                                #"
-echo "#                                                                #"
-echo "     We have counted a total of "$count "lambda invocations.     "
-echo "#                                                                #"
-echo "#                                                                #"
-echo "#  Thanks for using the Lacework AWS serverless call counter!    #"
-echo "#                                                                #"
-echo "#                                                                #"
-echo "##################################################################"
+echo ""
+echo ""
+echo "The script has counted a total of "$count "lambda invocations."
+echo "Between $start_time_hr and $end_time_hr."
+echo ""
+echo "Thanks for using the Lacework AWS serverless call counter!"
+echo ""
+echo ""
