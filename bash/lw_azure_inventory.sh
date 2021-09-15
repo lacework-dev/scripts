@@ -31,24 +31,39 @@ function getGateways {
   az network vnet-gateway list --resource-group $RG | jq length
 }
 
+function getSubscriptions {
+  az account list | jq -r '.[] | .id'
+}
+
+originalsub=$(az account show | jq -r '.id')
+
 echo "Starting inventory check."
-echo "Fetching VMs..."
-vms=$(getVMs)
-AZURE_VMS=$(($AZURE_VMS + $vms))
+echo "Iterating over subscriptions visible to this user"
+subs=$(getSubscriptions)
 
-echo "Fetching SQL Databases..."
-sql=$(getSQLServers)
-SQL_SERVERS=$(($SQL_SERVERS + $sql))
+for s in $subs; do
+  az account set --subscription $s
+  echo "Fetching VMs... in subscription " $s
+  vms=$(getVMs)
+  AZURE_VMS=$(($AZURE_VMS + $vms))
 
-echo "Fetching Load Balancers..."
-lbs=$(getLoadBalancers)
-LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
+  echo "Fetching SQL Databases... in subscription " $s
+  sql=$(getSQLServers)
+  SQL_SERVERS=$(($SQL_SERVERS + $sql))
 
-echo "Fetching Gateways..."
-for group in $(getResourceGroups); do
-  gw=$(getGateways $group)
-  GATEWAYS=$(($GATEWAYS + $gw))
+  echo "Fetching Load Balancers... in subscription " $s
+  lbs=$(getLoadBalancers)
+  LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
+
+  echo "Fetching Gateways... in subscription " $s
+  for group in $(getResourceGroups); do
+    gw=$(getGateways $group)
+    GATEWAYS=$(($GATEWAYS + $gw))
+  done
 done
+
+echo "Setting back original subscription into AZ CLI context"
+az account set --subscription $originalsub
 
 echo "######################################################################"
 echo "Lacework inventory collection complete."
@@ -59,3 +74,4 @@ echo "Load Balancers:    $LOAD_BALANCERS"
 echo "Vnet Gateways:     $GATEWAYS"
 echo "===================="
 echo "Total Resources:   $(($AZURE_VMS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS))"
+
