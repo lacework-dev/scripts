@@ -7,6 +7,18 @@ variable "prefix" {
   default = "tfvmex"
 }
 
+resource "random_password" "vm_password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "random_password" "sql_password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
 resource "azurerm_resource_group" "main" {
   name     = "${var.prefix}-resources"
   location = "East US"
@@ -66,8 +78,8 @@ resource "azurerm_virtual_machine" "main" {
   os_profile {
     computer_name  = "hostname"
     admin_username = "testadmin"
-    admin_password = "Password1234!"
-  }
+    admin_password = random_password.vm_password.result
+ }
   os_profile_linux_config {
     disable_password_authentication = false
   }
@@ -85,6 +97,10 @@ resource "random_id" "storageaccount" {
   byte_length = 8
 }
 
+resource "random_id" "sqlserver" {
+  byte_length = 8
+}
+
 resource "azurerm_storage_account" "example" {
   name                     = "${lower(random_id.storageaccount.hex)}"
   resource_group_name      = azurerm_resource_group.example.name
@@ -93,18 +109,18 @@ resource "azurerm_storage_account" "example" {
   account_replication_type = "LRS"
 }
 
-resource "azurerm_mssql_server" "example" {
-  name                         = "example-sqlserver"
+resource "azurerm_mssql_server" "example1" {
+  name                         = "example-sqlserver-${random_id.sqlserver.hex}"
   resource_group_name          = azurerm_resource_group.example.name
   location                     = azurerm_resource_group.example.location
   version                      = "12.0"
   administrator_login          = "4dm1n157r470r"
-  administrator_login_password = "4-v3ry-53cr37-p455w0rd"
+  administrator_login_password = random_password.sql_password.result
 }
 
 resource "azurerm_mssql_database" "test" {
   name           = "acctest-db-d"
-  server_id      = azurerm_mssql_server.example.id
+  server_id      = azurerm_mssql_server.example1.id
   collation      = "SQL_Latin1_General_CP1_CI_AS"
   license_type   = "LicenseIncluded"
   max_size_gb    = 4
@@ -118,7 +134,7 @@ resource "azurerm_mssql_database" "test" {
 
 }
 resource "azurerm_mssql_database_extended_auditing_policy" "example" {
-  database_id                             = azurerm_mssql_database.example.id
+  database_id                             = azurerm_mssql_database.test.id
   storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint
   storage_account_access_key              = azurerm_storage_account.example.primary_access_key
   storage_account_access_key_is_secondary = true
@@ -170,6 +186,7 @@ resource "azurerm_public_ip" "example3" {
   allocation_method = "Dynamic"
 }
 
+/* Commented out for time saving purposes 
 resource "azurerm_virtual_network_gateway" "example2" {
   name                = "test"
   location            = azurerm_resource_group.example2.location
@@ -226,3 +243,4 @@ EOF
     }
   }
 }
+*/
