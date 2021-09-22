@@ -100,7 +100,7 @@ function getECSFargateServices {
 }
 
 function getLambdaFunctions {
-  aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.NatGateways | length'
+  aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
 }
 
 function calculateInventory {
