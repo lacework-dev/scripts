@@ -39,6 +39,11 @@ REDSHIFT_CLUSTERS=0
 ELB_V1=0
 ELB_V2=0
 NAT_GATEWAYS=0
+ECS_FARGATE_CLUSTERS=0
+ECS_FARGATE_TASKS=0
+ECS_FARGATE_TASK_DEFINITIONS=0
+ECS_FARGATE_SERVICES=0
+LAMBDA_FNS=0
 
 function getRegions {
   aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
@@ -68,6 +73,36 @@ function getNatGateways {
   aws --profile $profile ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
+function getECSFargateClusters {
+  aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
+}
+
+function getECSFargateTaskDefinitions {
+  aws --profile $profile ecs list-task-definitions --region $r --output json --no-paginate | jq -r '.taskDefinitionArns | length'
+}
+
+function getECSFargateTasks {
+  TASKS=0
+  for c in $ecsfargateclusters; do
+    clustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq '.taskArns | length')
+    TASKS=$(($TASKS + $clustertasks))
+  done
+  echo "${TASKS}"
+}
+
+function getECSFargateServices {
+  SERVICES=0
+  for c in $ecsfargateclusters; do
+    clusterservices=$(aws --profile $profile ecs list-services --region $r --output json --cluster $c --no-paginate | jq '.serviceArns | length')
+    SERVICES=$(($SERVICES + $clusterservices))
+  done
+  echo "${SERVICES}"
+}
+
+function getLambdaFunctions {
+  aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
+}
+
 function calculateInventory {
   profile=$1
   for r in $(getRegions); do
@@ -91,6 +126,22 @@ function calculateInventory {
 
     natgw=$(getNatGateways $r $profile)
     NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
+
+    ecsfargateclusters=$(getECSFargateClusters $r $profile)
+    ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w)
+    ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
+
+    ecsfargatetasks=$(getECSFargateTasks $r $ecsfargateclusters $profile)
+    ECS_FARGATE_TASKS=$(($ECS_FARGATE_TASKS + $ecsfargatetasks))
+
+    ecsfargatetaskdefinitions=$(getECSFargateTaskDefinitions $r $profile)
+    ECS_FARGATE_TASK_DEFINITIONS=$(($ECS_FARGATE_TASK_DEFINITIONS + $ecsfargatetaskdefinitions))
+
+    ecsfargatesvcs=$(getECSFargateServices $r $ecsfargateclusters $profile)
+    ECS_FARGATE_SERVICES=$(($ECS_FARGATE_SERVICES + $ecsfargatesvcs))
+
+    lambdafns=$(getLambdaFunctions $r $profile)
+    LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
 done
 
 TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
@@ -108,6 +159,14 @@ function textoutput {
   echo "NAT Gateways:      $NAT_GATEWAYS"
   echo "===================="
   echo "Total Resources:   $TOTAL"
+  echo ""
+  echo "Additional Serverless Inventory Details:"
+  echo "===================="
+  echo "ECS Fargate Clusters:         $ECS_FARGATE_CLUSTERS"
+  echo "ECS Fargate Tasks:            $ECS_FARGATE_TASKS"
+  echo "ECS Fargate Task Definitions: $ECS_FARGATE_TASK_DEFINITIONS"
+  echo "ECS Fargate Services:         $ECS_FARGATE_SERVICES"
+  echo "Lambda Functions:             $LAMBDA_FNS"
 }
 
 function jsonoutput {
@@ -118,7 +177,12 @@ function jsonoutput {
   echo "  \"v1_lb\": \"$ELB_V1\","
   echo "  \"v2_lb\": \"$ELB_V2\","
   echo "  \"nat_gw\": \"$NAT_GATEWAYS\","
-  echo "  \"total\": \"$TOTAL\""
+  echo "  \"total\": \"$TOTAL\","
+  echo "  \"_ecs_fargate_clusters\": \"$ECS_FARGATE_CLUSTERS\","
+  echo "  \"_ecs_fargate_tasks\": \"$ECS_FARGATE_TASKS\","
+  echo "  \"_ecs_fargate_task_definitions\": \"$ECS_FARGATE_TASK_DEFINITIONS\","
+  echo "  \"_ecs_fargate_svcs\": \"$ECS_FARGATE_SERVICES\","
+  echo "  \"_lambda_functions\": \"$LAMBDA_FNS\""
   echo "}"
 }
 
