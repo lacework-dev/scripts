@@ -84,9 +84,9 @@ function getECSTaskDefinitions {
 function getECSFargateRunningTasks {
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
-    alltasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
-    if [ -n "${alltasks}" ]; then
-      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $alltasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
+    allclustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    if [ -n "${allclustertasks}" ]; then
+      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
       RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
     fi
   done
