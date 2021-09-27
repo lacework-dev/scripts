@@ -167,7 +167,7 @@ function textoutput {
   echo "===================="
   echo "Total Resources:   $TOTAL"
   echo ""
-  echo "Additional Serverless Inventory Details:"
+  echo "Additional Serverless Inventory Details (NOT included in Total Resources count above):"
   echo "===================="
   echo "ECS Fargate Clusters:           $ECS_FARGATE_CLUSTERS"
   echo "ECS Fargate Running Tasks:      $ECS_FARGATE_RUNNING_TASKS"
