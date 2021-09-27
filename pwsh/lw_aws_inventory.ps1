@@ -35,6 +35,11 @@ $global:REDSHIFT_CLUSTERS=0
 $global:ELB_V1=0
 $global:ELB_V2=0
 $global:NAT_GATEWAYS=0
+$global:ECS_FARGATE_CLUSTERS=0
+$global:ECS_FARGATE_TASKS=0
+$global:ECS_FARGATE_TASK_DEFINITIONS=0
+$global:ECS_FARGATE_SERVICES=0
+$global:LAMBA_FNS=0
 
 function getRegions {
     param(
@@ -98,6 +103,65 @@ function getNatGateways {
     $(aws --profile $profile ec2 describe-nat-gateways --region $region --output json --no-paginate | ConvertFrom-Json).NatGateways.Count
 }
 
+function getECSFargateClusters {
+    param(
+        $profile,
+        $region 
+    )
+    
+    $(aws --profile $profile ecs list-clusters --region $region --output json --no-paginate | ConvertFrom-Json).clusterArns
+}
+
+function getECSFargateTaskDefinitions {
+    param(
+        $profile,
+        $region 
+    )
+    
+    $(aws --profile $profile ecs list-task-definitions --region $region --output json --no-paginate | ConvertFrom-Json).taskDefinitionArns.Count
+}
+
+function getECSFargateTasks {
+    param(
+        $profile,
+        $region,
+        $clusters
+    )
+    $TASKS=0
+    
+    foreach ($c in $clusters){
+        $clustertasks=$(aws --profile $profile ecs list-tasks --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).taskArns.Count
+        $TASKS=$(($TASKS + $clustertasks))
+    }
+    
+    $TASKS
+}
+
+function getECSFargateServices {
+    param(
+        $profile,
+        $region,
+        $clusters
+    )
+    $SERVICES=0
+    
+    foreach ($c in $clusters){
+        $clusterservices=$(aws --profile $profile ecs list-services --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).serviceArns.Count
+        $SERVICES=$(($SERVICES + $clusterservices))
+    }
+    
+    $SERVICES
+}
+
+function getLambdaFunctions {
+    param(
+        $profile,
+        $region 
+    )
+    
+    $(aws --profile $profile lambda list-functions --region $region --output json --no-paginate | ConvertFrom-Json).Functions.Count
+}
+
 function calculateInventory {
     
     param(
@@ -144,6 +208,33 @@ function calculateInventory {
         if ($v -eq $true){
             write-host "Region $r - NAT_GW instance count $natgw"
         }
+
+        $ecsfargateclusters=$(getECSFargateClusters -region $r -profile $profile)
+        $ecsfargateclusterscount=$ecsfargateclusters.Count
+        $global:ECS_FARGATE_CLUSTERS=$(($global:ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
+        if ($v -eq $true){
+            write-host "Region $r - ECS_FARGATE_CLUSTERS cluster count $ecsfargateclusterscount"
+        }
+        $ecsfargatetasks=$(getECSFargateTasks -region $r -profile $profile -clusters $ecsfargateclusters)
+        $global:ECS_FARGATE_TASKS=$(($global:ECS_FARGATE_TASKS + $ecsfargatetasks))
+        if ($v -eq $true){
+            write-host "Region $r - ECS_FARGATE_TASKS task count $ecsfargatetasks"
+        }
+        $ecsfargatetaskdefinitions=$(getECSFargateTaskDefinitions -region $r -profile $profile)
+        $global:ECS_FARGATE_TASK_DEFINITIONS=$(($global:ECS_FARGATE_TASK_DEFINITIONS + $ecsfargatetaskdefinitions))
+        if ($v -eq $true){
+            write-host "Region $r - ECS_FARGATE_TASK_DEFINITIONS task definition count $ecsfargatetaskdefinitions"
+        }
+        $ecsfargateservices=$(getECSFargateServices -region $r -profile $profile -clusters $ecsfargateclusters)
+        $global:ECS_FARGATE_SERVICES=$(($global:ECS_FARGATE_SERVICES + $ecsfargateservices))
+        if ($v -eq $true){
+            write-host "Region $r - ECS_FARGATE_SERVICES service count $ecsfargateservices"
+        }
+        $lambdafns=$(getLambdaFunctions -region $r -profile $profile)
+        $global:LAMBDA_FNS=$(($global:LAMBDA_FNS + $lambdafns))
+        if ($v -eq $true){
+            write-host "Region $r - LAMBDA_FNS function count $lambdafns"
+        }
     }
 
     #return $global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS
@@ -161,6 +252,14 @@ function textoutput {
   write-output "NAT Gateways:      $global:NAT_GATEWAYS"
   write-output "===================="
   write-output "Total Resources:   $($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)"
+  write-output ""
+  write-output "Additional Serverless Inventory Details (NOT included in Total Resources count above):"
+  write-output "===================="
+  write-output "ECS Fargate Clusters:         $global:ECS_FARGATE_CLUSTERS"
+  write-output "ECS Fargate Tasks:            $global:ECS_FARGATE_TASKS"
+  write-output "ECS Fargate Task Definitions: $global:ECS_FARGATE_TASK_DEFINITIONS"
+  write-output "ECS Fargate Services:         $global:ECS_FARGATE_SERVICES"
+  write-output "Lambda Functions:             $global:LAMBDA_FNS"
 }
 
 function jsonoutput {
@@ -171,7 +270,12 @@ function jsonoutput {
   write-output  "  `"v1_lb`": `"$global:ELB_V1`","
   write-output  "  `"v2_lb`": `"$global:ELB_V2`","
   write-output  "  `"nat_gw`": `"$global:NAT_GATEWAYS`","
-  write-output  "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`""
+  write-output  "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`","
+  write-output  "  `"_ecs_fargate_clusters`": `"$global:ECS_FARGATE_CLUSTERS`","
+  write-output  "  `"_ecs_fargate_tasks`": `"$global:ECS_FARGATE_TASKS`","
+  write-output  "  `"_ecs_fargate_task_definitions`": `"$global:ECS_FARGATE_TASK_DEFINITIONS`","
+  write-output  "  `"_ecs_fargate_svcs`": `"$global:ECS_FARGATE_SERVICES`","
+  write-output  "  `"_lambda_functions`": `"$global:LAMBDA_FNS`""
   write-output  "}"
 }
 
