@@ -36,9 +36,9 @@ $global:ELB_V1=0
 $global:ELB_V2=0
 $global:NAT_GATEWAYS=0
 $global:ECS_FARGATE_CLUSTERS=0
-$global:ECS_FARGATE_TASKS=0
-$global:ECS_FARGATE_TASK_DEFINITIONS=0
-$global:ECS_FARGATE_SERVICES=0
+$global:ECS_FARGATE_RUNNING_TASKS=0
+$global:ECS_TASK_DEFINITIONS=0
+$global:ECS_FARGATE_ACTIVE_SERVICES=0
 $global:LAMBA_FNS=0
 
 function getRegions {
@@ -112,7 +112,7 @@ function getECSFargateClusters {
     $(aws --profile $profile ecs list-clusters --region $region --output json --no-paginate | ConvertFrom-Json).clusterArns
 }
 
-function getECSFargateTaskDefinitions {
+function getECSTaskDefinitions {
     param(
         $profile,
         $region 
@@ -121,20 +121,23 @@ function getECSFargateTaskDefinitions {
     $(aws --profile $profile ecs list-task-definitions --region $region --output json --no-paginate | ConvertFrom-Json).taskDefinitionArns.Count
 }
 
-function getECSFargateTasks {
+function getECSFargateRunningTasks {
     param(
         $profile,
         $region,
         $clusters
     )
-    $TASKS=0
+    $RUNNING_FARGATE_TASKS=0
     
     foreach ($c in $clusters){
-        $clustertasks=$(aws --profile $profile ecs list-tasks --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).taskArns.Count
-        $TASKS=$(($TASKS + $clustertasks))
+        $allclustertasks=$(aws --profile $profile ecs list-tasks --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).taskArns
+        if($allclustertasks) {
+            $fargaterunningtasks=($(aws --profile $profile ecs describe-tasks --region $region --output json --tasks $allclustertasks --cluster $c --no-paginate | ConvertFrom-Json).tasks | Where-Object { ($_.launchType -EQ "FARGATE") -and ($_.lastStatus -EQ "RUNNING") }).Count
+            $RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
+        }
     }
     
-    $TASKS
+    $RUNNING_FARGATE_TASKS
 }
 
 function getECSFargateServices {
@@ -143,14 +146,17 @@ function getECSFargateServices {
         $region,
         $clusters
     )
-    $SERVICES=0
+    $ACTIVE_FARGATE_SERVICES=0
     
     foreach ($c in $clusters){
-        $clusterservices=$(aws --profile $profile ecs list-services --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).serviceArns.Count
-        $SERVICES=$(($SERVICES + $clusterservices))
+        $allclusterservices=$(aws --profile $profile ecs list-services --region $region --output json --cluster $c --no-paginate | ConvertFrom-Json).serviceArns
+        if($allclusterservices) {
+            $fargateactiveservices=($(aws --profile $profile ecs describe-services --region $region --output json --services $allclusterservices --cluster $c --no-paginate | ConvertFrom-Json).services | Where-Object { ($_.launchType -EQ "FARGATE") -and ($_.status -EQ "ACTIVE") }).Count
+            $ACTIVE_FARGATE_SERVICES=$(($ACTIVE_FARGATE_SERVICES + $fargateactiveservices))
+        }
     }
     
-    $SERVICES
+    $ACTIVE_FARGATE_SERVICES
 }
 
 function getLambdaFunctions {
@@ -215,20 +221,20 @@ function calculateInventory {
         if ($v -eq $true){
             write-host "Region $r - ECS_FARGATE_CLUSTERS cluster count $ecsfargateclusterscount"
         }
-        $ecsfargatetasks=$(getECSFargateTasks -region $r -profile $profile -clusters $ecsfargateclusters)
-        $global:ECS_FARGATE_TASKS=$(($global:ECS_FARGATE_TASKS + $ecsfargatetasks))
+        $ecsfargaterunningtasks=$(getECSFargateRunningTasks -region $r -profile $profile -clusters $ecsfargateclusters)
+        $global:ECS_FARGATE_RUNNING_TASKS=$(($global:ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
         if ($v -eq $true){
-            write-host "Region $r - ECS_FARGATE_TASKS task count $ecsfargatetasks"
+            write-host "Region $r - ECS_FARGATE_RUNNING_TASKS running task count $ecsfargaterunningtasks"
         }
-        $ecsfargatetaskdefinitions=$(getECSFargateTaskDefinitions -region $r -profile $profile)
-        $global:ECS_FARGATE_TASK_DEFINITIONS=$(($global:ECS_FARGATE_TASK_DEFINITIONS + $ecsfargatetaskdefinitions))
+        $ecstaskdefinitions=$(getECSTaskDefinitions -region $r -profile $profile)
+        $global:ECS_TASK_DEFINITIONS=$(($global:ECS_TASK_DEFINITIONS + $ecstaskdefinitions))
         if ($v -eq $true){
-            write-host "Region $r - ECS_FARGATE_TASK_DEFINITIONS task definition count $ecsfargatetaskdefinitions"
+            write-host "Region $r - ECS_TASK_DEFINITIONS task definition count $ecstaskdefinitions"
         }
         $ecsfargateservices=$(getECSFargateServices -region $r -profile $profile -clusters $ecsfargateclusters)
-        $global:ECS_FARGATE_SERVICES=$(($global:ECS_FARGATE_SERVICES + $ecsfargateservices))
+        $global:ECS_FARGATE_ACTIVE_SERVICES=$(($global:ECS_FARGATE_ACTIVE_SERVICES + $ecsfargateservices))
         if ($v -eq $true){
-            write-host "Region $r - ECS_FARGATE_SERVICES service count $ecsfargateservices"
+            write-host "Region $r - ECS_FARGATE_ACTIVE_SERVICES service count $ecsfargateservices"
         }
         $lambdafns=$(getLambdaFunctions -region $r -profile $profile)
         $global:LAMBDA_FNS=$(($global:LAMBDA_FNS + $lambdafns))
@@ -255,11 +261,11 @@ function textoutput {
   write-output ""
   write-output "Additional Serverless Inventory Details (NOT included in Total Resources count above):"
   write-output "===================="
-  write-output "ECS Fargate Clusters:         $global:ECS_FARGATE_CLUSTERS"
-  write-output "ECS Fargate Tasks:            $global:ECS_FARGATE_TASKS"
-  write-output "ECS Fargate Task Definitions: $global:ECS_FARGATE_TASK_DEFINITIONS"
-  write-output "ECS Fargate Services:         $global:ECS_FARGATE_SERVICES"
-  write-output "Lambda Functions:             $global:LAMBDA_FNS"
+  write-output "ECS Fargate Clusters:           $global:ECS_FARGATE_CLUSTERS"
+  write-output "ECS Fargate Running Tasks:      $global:ECS_FARGATE_RUNNING_TASKS"
+  write-output "ECS Fargate Active Services:    $global:ECS_FARGATE_ACTIVE_SERVICES"
+  write-output "ECS Task Definitions (All ECS): $global:ECS_TASK_DEFINITIONS"
+  write-output "Lambda Functions:               $global:LAMBDA_FNS"
 }
 
 function jsonoutput {
@@ -272,9 +278,9 @@ function jsonoutput {
   write-output  "  `"nat_gw`": `"$global:NAT_GATEWAYS`","
   write-output  "  `"total`": `"$($global:EC2_INSTANCES + $global:RDS_INSTANCES + $global:REDSHIFT_CLUSTERS + $global:ELB_V1 + $global:ELB_V2 + $global:NAT_GATEWAYS)`","
   write-output  "  `"_ecs_fargate_clusters`": `"$global:ECS_FARGATE_CLUSTERS`","
-  write-output  "  `"_ecs_fargate_tasks`": `"$global:ECS_FARGATE_TASKS`","
-  write-output  "  `"_ecs_fargate_task_definitions`": `"$global:ECS_FARGATE_TASK_DEFINITIONS`","
-  write-output  "  `"_ecs_fargate_svcs`": `"$global:ECS_FARGATE_SERVICES`","
+  write-output  "  `"_ecs_fargate_running_tasks`": `"$global:ECS_FARGATE_RUNNING_TASKS`","
+  write-output  "  `"_ecs_fargate_active_svcs`": `"$global:ECS_FARGATE_ACTIVE_SERVICES`","
+  write-output  "  `"_ecs_task_definitions`": `"$global:ECS_TASK_DEFINITIONS`","
   write-output  "  `"_lambda_functions`": `"$global:LAMBDA_FNS`""
   write-output  "}"
 }
