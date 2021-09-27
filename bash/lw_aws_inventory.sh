@@ -42,7 +42,7 @@ NAT_GATEWAYS=0
 ECS_FARGATE_CLUSTERS=0
 ECS_FARGATE_RUNNING_TASKS=0
 ECS_TASK_DEFINITIONS=0
-ECS_FARGATE_SERVICES=0
+ECS_FARGATE_ACTIVE_SERVICES=0
 LAMBDA_FNS=0
 
 function getRegions {
@@ -95,12 +95,15 @@ function getECSFargateRunningTasks {
 }
 
 function getECSFargateServices {
-  SERVICES=0
+  ACTIVE_FARGATE_SERVICES=0
   for c in $ecsfargateclusters; do
-    clusterservices=$(aws --profile $profile ecs list-services --region $r --output json --cluster $c --no-paginate | jq '.serviceArns | length')
-    SERVICES=$(($SERVICES + $clusterservices))
+    allclusterservices=$(aws --profile $profile ecs list-services --region $r --output json --cluster $c --no-paginate | jq -r '.serviceArns | join(" ")')
+    if [ -n "${allclusterservices}" ]; then
+      fargateactiveservices=$(aws --profile $profile ecs describe-services --region $r --output json --services $allclusterservices --cluster $c --no-paginate | jq '[.services[] | select(.launchType=="FARGATE") | select(.status=="ACTIVE")] | length')
+      ACTIVE_FARGATE_SERVICES=$(($ACTIVE_FARGATE_SERVICES + $fargateactiveservices))
+    fi
   done
-  echo "${SERVICES}"
+  echo "${ACTIVE_FARGATE_SERVICES}"
 }
 
 function getLambdaFunctions {
@@ -142,7 +145,7 @@ function calculateInventory {
     ECS_TASK_DEFINITIONS=$(($ECS_TASK_DEFINITIONS + $ecstaskdefinitions))
 
     ecsfargatesvcs=$(getECSFargateServices $r $ecsfargateclusters $profile)
-    ECS_FARGATE_SERVICES=$(($ECS_FARGATE_SERVICES + $ecsfargatesvcs))
+    ECS_FARGATE_ACTIVE_SERVICES=$(($ECS_FARGATE_ACTIVE_SERVICES + $ecsfargatesvcs))
 
     lambdafns=$(getLambdaFunctions $r $profile)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
@@ -168,7 +171,7 @@ function textoutput {
   echo "===================="
   echo "ECS Fargate Clusters:           $ECS_FARGATE_CLUSTERS"
   echo "ECS Fargate Running Tasks:      $ECS_FARGATE_RUNNING_TASKS"
-  echo "ECS Fargate Services:           $ECS_FARGATE_SERVICES"
+  echo "ECS Fargate Active Services:    $ECS_FARGATE_ACTIVE_SERVICES"
   echo "ECS Task Definitions (all ECS): $ECS_TASK_DEFINITIONS"
   echo "Lambda Functions:               $LAMBDA_FNS"
 }
@@ -184,7 +187,7 @@ function jsonoutput {
   echo "  \"total\": \"$TOTAL\","
   echo "  \"_ecs_fargate_clusters\": \"$ECS_FARGATE_CLUSTERS\","
   echo "  \"_ecs_fargate_running_tasks\": \"$ECS_FARGATE_RUNNING_TASKS\","
-  echo "  \"_ecs_fargate_svcs\": \"$ECS_FARGATE_SERVICES\","
+  echo "  \"_ecs_fargate_active_svcs\": \"$ECS_FARGATE_ACTIVE_SERVICES\","
   echo "  \"_ecs_task_definitions\": \"$ECS_TASK_DEFINITIONS\","
   echo "  \"_lambda_functions\": \"$LAMBDA_FNS\""
   echo "}"
