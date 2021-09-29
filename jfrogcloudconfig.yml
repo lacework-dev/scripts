@@ -3,7 +3,7 @@ lacework:
   account_name: YourLaceworkInstance
   integration_access_token: YourProxyIntToken
 registries:
-  - domain: YourJFrogTenantID.jfrog.io/artifactory/default-docker-virtual
+  - domain: YourJFrogTenantID.jfrog.io
     name: JFrog
     ssl: true
     credentials:
