@@ -1,0 +1,12 @@
+static_cache_location: /opt/lacework/cache
+lacework:
+  account_name: YourLaceworkInstance
+  integration_access_token: YourProxyIntToken
+registries:
+  - domain: YourJFrogTenantID.jfrog.io/artifactory/default-docker-virtual
+    name: JFrog
+    ssl: true
+    credentials:
+      user_name: "user"
+      password: "pass"
+    notification_type: jfrog
