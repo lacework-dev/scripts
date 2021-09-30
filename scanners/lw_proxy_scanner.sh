@@ -9,7 +9,7 @@ publicimages=$(kubectl describe deployments -A | grep Image: | sed "s/Image:[ \t
 export LW_SCANNER_SCAN_LIBRARY_PACKAGES=true
 export LW_SCANNER_SAVE_RESULTS=true
 
-while getopts r:lwp: flag
+while getopts r:lwp:d flag
 do
     case "${flag}" in
         r) REPOSITORY=${OPTARG};;
