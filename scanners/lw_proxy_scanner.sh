@@ -11,7 +11,7 @@ publicimages=$(kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.co
 export LW_SCANNER_SCAN_LIBRARY_PACKAGES=true
 export LW_SCANNER_SAVE_RESULTS=true
 
-while getopts r:lwp:d:s flag
+while getopts "r:lwp:d:s:" flag
 do
     case "${flag}" in
         r) REPOSITORY=${OPTARG};;
