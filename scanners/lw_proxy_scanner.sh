@@ -39,7 +39,7 @@ do
     
     if [[ $SCANNER == "proxy" ]]; then
         commandstr="curl --location --request POST '${LWPROXY}:8080/v1/scan' --header 'Content-Type: application/json' --data-raw '{\"registry\": \"${REGISTRY_DOMAIN}\",\"image_name\": \"$REPOSITORY/$name\",\"tag\": \"$tag\"}'"
-    elif [[ $SCANNER == "inilne" ]]; then 
+    elif [[ $SCANNER == "inline" ]]; then 
         commandstr="lw-scanner evaluate $name $tag"
     fi
     
