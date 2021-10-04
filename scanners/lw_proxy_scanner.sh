@@ -3,22 +3,23 @@
 # for ns in $namespaces: do
 EXCLUDE_FILTERS="azurecr.io"
 REPOSITORY="default-docker-virtual"
-REGISTRY_DOMAIN="yourjfrogtenant.jfrog.io"
+REGISTRY_DOMAIN="stevetlacework.jfrog.io"
+SCANNER="proxy"
 LWPROXY="localhost"
-publicimages=$(kubectl describe deployments -A | grep Image: | sed "s/Image:[ \t]*//g" | grep -v $EXCLUDE_FILTERS)
+publicimages=$(kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" | tr -s '[[:space:]]' '\n')
+
 export LW_SCANNER_SCAN_LIBRARY_PACKAGES=true
 export LW_SCANNER_SAVE_RESULTS=true
 
-while getopts r:lwp: flag
+while getopts r:lwp:d:s:k flag
 do
     case "${flag}" in
         r) REPOSITORY=${OPTARG};;
         lwp) LWPROXY=${OPTARG};;
         d) REGISTRY_DOMAIN=${OPTARG};;
+        s) SCANNER=${OPTARG};;
     esac
 done
-
-echo +++++Commencing Proxy scan of images in : $REPOSITORY
 
 for image in $publicimages:
 do
@@ -31,11 +32,13 @@ do
     tag=${arrIN[1]}    
 
     echo +++++Scanning image $name with label $tag
-    echo +++++ LWPROXY: $LWPROXY and REPOSITORY: $REPOSITORY
     
-    commandstr="curl --location --request POST '${LWPROXY}:8080/v1/scan' --header 'Content-Type: application/json' --data-raw '{\"registry\": \"${REGISTRY_DOMAIN}\",\"image_name\": \"$REPOSITORY/$name\",\"tag\": \"$tag\"}'"
+    if [[ $SCANNER == "proxy" ]]; then
+        commandstr="curl --location --request POST '${LWPROXY}:8080/v1/scan' --header 'Content-Type: application/json' --data-raw '{\"registry\": \"${REGISTRY_DOMAIN}\",\"image_name\": \"$REPOSITORY/$name\",\"tag\": \"$tag\"}'"
+    elif [[ $SCANNER == "inilne" ]]; then 
+        commandstr="lw-scanner evaluate $name $tag"
+    fi
+    
     echo +++++executing: $commandstr
-    
     eval $commandstr
 done
-
