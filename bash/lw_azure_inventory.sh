@@ -10,6 +10,15 @@ SQL_SERVERS=0
 LOAD_BALANCERS=0
 GATEWAYS=0
 
+function getSubscriptions {
+  az account list | jq -r '.[] | .id'
+}
+
+function setSubscription {
+  SUB=$1
+  az account set --subscription $SUB
+}
+
 function getResourceGroups {
   az group list | jq -r '.[] | .name'
 }
@@ -38,24 +47,25 @@ function getSubscriptions {
 originalsub=$(az account show | jq -r '.id')
 
 echo "Starting inventory check."
-echo "Iterating over subscriptions visible to this user"
-subs=$(getSubscriptions)
+echo "Fetching Subscriptions..."
 
-for s in $subs; do
-  az account set --subscription $s
-  echo "Fetching VMs... in subscription " $s
+for sub in $(getSubscriptions); do
+  echo "Switching to subscription $sub"
+  setSubscription $sub
+
+  echo "Fetching VMs..."
   vms=$(getVMs)
   AZURE_VMS=$(($AZURE_VMS + $vms))
 
-  echo "Fetching SQL Databases... in subscription " $s
+  echo "Fetching SQL Databases..."
   sql=$(getSQLServers)
   SQL_SERVERS=$(($SQL_SERVERS + $sql))
 
-  echo "Fetching Load Balancers... in subscription " $s
+  echo "Fetching Load Balancers..."
   lbs=$(getLoadBalancers)
   LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
 
-  echo "Fetching Gateways... in subscription " $s
+  echo "Fetching Gateways..."
   for group in $(getResourceGroups); do
     gw=$(getGateways $group)
     GATEWAYS=$(($GATEWAYS + $gw))
