@@ -39,7 +39,7 @@ $global:ECS_FARGATE_CLUSTERS=0
 $global:ECS_FARGATE_RUNNING_TASKS=0
 $global:ECS_TASK_DEFINITIONS=0
 $global:ECS_FARGATE_ACTIVE_SERVICES=0
-$global:LAMBA_FNS=0
+$global:LAMBDA_FNS=0
 
 function getRegions {
     param(
