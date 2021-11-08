@@ -2,7 +2,8 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
-# You can specify a profile with the -p flag, or get JSON output with the -j flag.
+# You can specify a profile with the -p flag or use environment variables by specifying a -e flag, 
+# get JSON output with the -j flag.
 # Note:
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
@@ -12,7 +13,7 @@
 AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp:" opt; do
+while getopts ":p:je" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -20,17 +21,26 @@ while getopts ":jp:" opt; do
     j )
       JSON="true"
       ;;
+    e )
+      USE_ENV="true"
+      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j] [-e]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j] [-e]" 1>&2
       exit 1
       ;;
   esac
 done
 shift $((OPTIND -1))
+
+AWS_PROFILE_STRING=""
+if [ "$USE_ENV" != "true" ];
+then
+  AWS_PROFILE_STRING="--profile $profile"
+fi
 
 # Set the initial counts to zero.
 EC2_INSTANCES=0
@@ -46,47 +56,47 @@ ECS_FARGATE_ACTIVE_SERVICES=0
 LAMBDA_FNS=0
 
 function getRegions {
-  aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws $AWS_PROFILE_STRING ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
-  aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
+  aws $AWS_PROFILE_STRING ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
-  aws --profile $profile rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
+  aws $AWS_PROFILE_STRING rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
 }
 
 function getRedshift {
-  aws --profile $profile redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
+  aws $AWS_PROFILE_STRING redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
 }
 
 function getElbv1 {
-  aws --profile $profile elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
+  aws $AWS_PROFILE_STRING elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
 }
 
 function getElbv2 {
-  aws --profile $profile elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
+  aws $AWS_PROFILE_STRING elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
 }
 
 function getNatGateways {
-  aws --profile $profile ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
+  aws $AWS_PROFILE_STRING ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
 function getECSFargateClusters {
-  aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
+  aws $AWS_PROFILE_STRING ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
 }
 
 function getECSTaskDefinitions {
-  aws --profile $profile ecs list-task-definitions --region $r --output json --no-paginate | jq '.taskDefinitionArns | length'
+  aws $AWS_PROFILE_STRING ecs list-task-definitions --region $r --output json --no-paginate | jq '.taskDefinitionArns | length'
 }
 
 function getECSFargateRunningTasks {
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
-    allclustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    allclustertasks=$(aws $AWS_PROFILE_STRING ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
     if [ -n "${allclustertasks}" ]; then
-      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
+      fargaterunningtasks=$(aws $AWS_PROFILE_STRING ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
       RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
     fi
   done
@@ -97,9 +107,9 @@ function getECSFargateRunningTasks {
 function getECSFargateServices {
   ACTIVE_FARGATE_SERVICES=0
   for c in $ecsfargateclusters; do
-    allclusterservices=$(aws --profile $profile ecs list-services --region $r --output json --cluster $c --no-paginate | jq -r '.serviceArns | join(" ")')
+    allclusterservices=$(aws $AWS_PROFILE_STRING ecs list-services --region $r --output json --cluster $c --no-paginate | jq -r '.serviceArns | join(" ")')
     if [ -n "${allclusterservices}" ]; then
-      fargateactiveservices=$(aws --profile $profile ecs describe-services --region $r --output json --services $allclusterservices --cluster $c --no-paginate | jq '[.services[] | select(.launchType=="FARGATE") | select(.status=="ACTIVE")] | length')
+      fargateactiveservices=$(aws $AWS_PROFILE_STRING ecs describe-services --region $r --output json --services $allclusterservices --cluster $c --no-paginate | jq '[.services[] | select(.launchType=="FARGATE") | select(.status=="ACTIVE")] | length')
       ACTIVE_FARGATE_SERVICES=$(($ACTIVE_FARGATE_SERVICES + $fargateactiveservices))
     fi
   done
@@ -107,7 +117,7 @@ function getECSFargateServices {
 }
 
 function getLambdaFunctions {
-  aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
+  aws $AWS_PROFILE_STRING lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
 }
 
 function calculateInventory {
@@ -193,13 +203,23 @@ function jsonoutput {
   echo "}"
 }
 
-for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
-do
-    calculateInventory $PROFILE
-done
-
-if [ "$JSON" == "true" ]; then
-  jsonoutput
+if [ "$USE_ENV" == "true" ];
+then
+  calculateInventory
+  if [ "$JSON" == "true" ]; then
+    jsonoutput
+  else
+    textoutput
+  fi
 else
-  textoutput
+  for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+  do
+      calculateInventory $PROFILE
+  done
+
+  if [ "$JSON" == "true" ]; then
+    jsonoutput
+  else
+    textoutput
+  fi
 fi
