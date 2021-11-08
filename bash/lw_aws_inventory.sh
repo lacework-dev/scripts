@@ -2,8 +2,10 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
-# You can specify a profile with the -p flag or use environment variables by specifying a -e flag, 
-# get JSON output with the -j flag.
+# By default this script will try to find your AWS credentials in the environment.
+
+# You can specify a profile with the -p flag
+# Get JSON output with the -j flag.
 # Note:
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
@@ -13,34 +15,27 @@
 AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:je" opt; do
+while getopts ":p:j" opt; do
   case ${opt} in
     p )
+      USE_PROFILE="true"
       AWS_PROFILE=$OPTARG
       ;;
     j )
       JSON="true"
       ;;
-    e )
-      USE_ENV="true"
-      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j] [-e]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j] [-e]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-j]" 1>&2
       exit 1
       ;;
   esac
 done
 shift $((OPTIND -1))
 
-AWS_PROFILE_STRING=""
-if [ "$USE_ENV" != "true" ];
-then
-  AWS_PROFILE_STRING="--profile $profile"
-fi
 
 # Set the initial counts to zero.
 EC2_INSTANCES=0
@@ -121,43 +116,43 @@ function getLambdaFunctions {
 }
 
 function calculateInventory {
-  profile=$1
+  # profile=$1
   for r in $(getRegions); do
     if [ "$JSON" != "true" ]; then
       echo $r
     fi
-    instances=$(getInstances $r $profile)
+    instances=$(getInstances $r)
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
 
-    rds=$(getRDSInstances $r $profile)
+    rds=$(getRDSInstances $r)
     RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
 
-    redshift=$(getRedshift $r $profile)
+    redshift=$(getRedshift $r)
     REDSHIFT_CLUSTERS=$(($REDSHIFT_CLUSTERS + $redshift))
 
-    elbv1=$(getElbv1 $r $profile)
+    elbv1=$(getElbv1 $r)
     ELB_V1=$(($ELB_V1 + $elbv1))
 
-    elbv2=$(getElbv2 $r $profile)
+    elbv2=$(getElbv2 $r)
     ELB_V2=$(($ELB_V2 + $elbv2))
 
-    natgw=$(getNatGateways $r $profile)
+    natgw=$(getNatGateways $r)
     NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
 
-    ecsfargateclusters=$(getECSFargateClusters $r $profile)
+    ecsfargateclusters=$(getECSFargateClusters $r)
     ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w)
     ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
 
-    ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile)
+    ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters)
     ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
 
-    ecstaskdefinitions=$(getECSTaskDefinitions $r $profile)
+    ecstaskdefinitions=$(getECSTaskDefinitions $r)
     ECS_TASK_DEFINITIONS=$(($ECS_TASK_DEFINITIONS + $ecstaskdefinitions))
 
-    ecsfargatesvcs=$(getECSFargateServices $r $ecsfargateclusters $profile)
+    ecsfargatesvcs=$(getECSFargateServices $r $ecsfargateclusters)
     ECS_FARGATE_ACTIVE_SERVICES=$(($ECS_FARGATE_ACTIVE_SERVICES + $ecsfargatesvcs))
 
-    lambdafns=$(getLambdaFunctions $r $profile)
+    lambdafns=$(getLambdaFunctions $r)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
 done
 
@@ -203,23 +198,26 @@ function jsonoutput {
   echo "}"
 }
 
-if [ "$USE_ENV" == "true" ];
+if [ "$USE_PROFILE" == "true" ];
 then
-  calculateInventory
-  if [ "$JSON" == "true" ]; then
-    jsonoutput
-  else
-    textoutput
-  fi
-else
+  echo "Using profiles: $AWS_PROFILE"
   for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
   do
+      echo "Gathering inventory for $PROFILE"
+
+      # Use profile, use it in all AWS CLI commands
+      AWS_PROFILE_STRING="--profile $PROFILE"
       calculateInventory $PROFILE
   done
+else
+  # No profile being used, so set an empty string to omit it from all AWS CLI commands
+  AWS_PROFILE_STRING=""
 
-  if [ "$JSON" == "true" ]; then
-    jsonoutput
-  else
-    textoutput
-  fi
+  calculateInventory
+fi
+
+if [ "$JSON" == "true" ]; then
+  jsonoutput
+else
+  textoutput
 fi
