@@ -44,6 +44,7 @@ ECS_FARGATE_RUNNING_TASKS=0
 ECS_TASK_DEFINITIONS=0
 ECS_FARGATE_ACTIVE_SERVICES=0
 LAMBDA_FNS=0
+LAMBDA_FNS_EXIST="No"
 
 function getRegions {
   aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
@@ -149,6 +150,7 @@ function calculateInventory {
 
     lambdafns=$(getLambdaFunctions $r $profile)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
+    if [ LAMBDA_FNS > 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
 done
 
 TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
@@ -173,7 +175,7 @@ function textoutput {
   echo "ECS Fargate Running Tasks:      $ECS_FARGATE_RUNNING_TASKS"
   echo "ECS Fargate Active Services:    $ECS_FARGATE_ACTIVE_SERVICES"
   echo "ECS Task Definitions (all ECS): $ECS_TASK_DEFINITIONS"
-  echo "Lambda Functions:               $LAMBDA_FNS"
+  echo "Lambda Functions Exist:         $LAMBDA_FNS_EXIST"
 }
 
 function jsonoutput {
@@ -189,7 +191,7 @@ function jsonoutput {
   echo "  \"_ecs_fargate_running_tasks\": \"$ECS_FARGATE_RUNNING_TASKS\","
   echo "  \"_ecs_fargate_active_svcs\": \"$ECS_FARGATE_ACTIVE_SERVICES\","
   echo "  \"_ecs_task_definitions\": \"$ECS_TASK_DEFINITIONS\","
-  echo "  \"_lambda_functions\": \"$LAMBDA_FNS\""
+  echo "  \"_lambda_functions_exist\": \"$LAMBDA_FNS_EXIST\""
   echo "}"
 }
 
