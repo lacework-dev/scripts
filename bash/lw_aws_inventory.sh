@@ -41,8 +41,6 @@ ELB_V2=0
 NAT_GATEWAYS=0
 ECS_FARGATE_CLUSTERS=0
 ECS_FARGATE_RUNNING_TASKS=0
-ECS_TASK_DEFINITIONS=0
-ECS_FARGATE_ACTIVE_SERVICES=0
 LAMBDA_FNS=0
 LAMBDA_FNS_EXIST="No"
 
@@ -78,16 +76,12 @@ function getECSFargateClusters {
   aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
 }
 
-function getECSTaskDefinitions {
-  aws --profile $profile ecs list-task-definitions --region $r --output json --no-paginate | jq '.taskDefinitionArns | length'
-}
-
 function getECSFargateRunningTasks {
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
     allclustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
     if [ -n "${allclustertasks}" ]; then
-      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
+      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | .containers[] | select(.lastStatus=="RUNNING")] | length')
       RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
     fi
   done
@@ -95,17 +89,6 @@ function getECSFargateRunningTasks {
   echo "${RUNNING_FARGATE_TASKS}"
 }
 
-function getECSFargateServices {
-  ACTIVE_FARGATE_SERVICES=0
-  for c in $ecsfargateclusters; do
-    allclusterservices=$(aws --profile $profile ecs list-services --region $r --output json --cluster $c --no-paginate | jq -r '.serviceArns | join(" ")')
-    if [ -n "${allclusterservices}" ]; then
-      fargateactiveservices=$(aws --profile $profile ecs describe-services --region $r --output json --services $allclusterservices --cluster $c --no-paginate | jq '[.services[] | select(.launchType=="FARGATE") | select(.status=="ACTIVE")] | length')
-      ACTIVE_FARGATE_SERVICES=$(($ACTIVE_FARGATE_SERVICES + $fargateactiveservices))
-    fi
-  done
-  echo "${ACTIVE_FARGATE_SERVICES}"
-}
 
 function getLambdaFunctions {
   aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
@@ -142,15 +125,9 @@ function calculateInventory {
     ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile)
     ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
 
-    ecstaskdefinitions=$(getECSTaskDefinitions $r $profile)
-    ECS_TASK_DEFINITIONS=$(($ECS_TASK_DEFINITIONS + $ecstaskdefinitions))
-
-    ecsfargatesvcs=$(getECSFargateServices $r $ecsfargateclusters $profile)
-    ECS_FARGATE_ACTIVE_SERVICES=$(($ECS_FARGATE_ACTIVE_SERVICES + $ecsfargatesvcs))
-
     lambdafns=$(getLambdaFunctions $r $profile)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
-    if [ LAMBDA_FNS > 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
+    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
 done
 
 TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
@@ -169,12 +146,13 @@ function textoutput {
   echo "===================="
   echo "Total Resources:   $TOTAL"
   echo ""
+  echo "Fargate Information"
+  echo "===================="
+  echo "ECS Fargate Clusters:       $ECS_FARGATE_CLUSTERS"
+  echo "ECS Fargate Containers:     $ECS_FARGATE_RUNNING_TASKS"
+  echo ""
   echo "Additional Serverless Inventory Details (NOT included in Total Resources count above):"
   echo "===================="
-  echo "ECS Fargate Clusters:           $ECS_FARGATE_CLUSTERS"
-  echo "ECS Fargate Running Tasks:      $ECS_FARGATE_RUNNING_TASKS"
-  echo "ECS Fargate Active Services:    $ECS_FARGATE_ACTIVE_SERVICES"
-  echo "ECS Task Definitions (all ECS): $ECS_TASK_DEFINITIONS"
   echo "Lambda Functions Exist:         $LAMBDA_FNS_EXIST"
 }
 
@@ -188,9 +166,7 @@ function jsonoutput {
   echo "  \"nat_gw\": \"$NAT_GATEWAYS\","
   echo "  \"total\": \"$TOTAL\","
   echo "  \"_ecs_fargate_clusters\": \"$ECS_FARGATE_CLUSTERS\","
-  echo "  \"_ecs_fargate_running_tasks\": \"$ECS_FARGATE_RUNNING_TASKS\","
-  echo "  \"_ecs_fargate_active_svcs\": \"$ECS_FARGATE_ACTIVE_SERVICES\","
-  echo "  \"_ecs_task_definitions\": \"$ECS_TASK_DEFINITIONS\","
+  echo "  \"_ecs_fargate_running_tasks_containers\": \"$ECS_FARGATE_RUNNING_TASKS\","
   echo "  \"_lambda_functions_exist\": \"$LAMBDA_FNS_EXIST\""
   echo "}"
 }
