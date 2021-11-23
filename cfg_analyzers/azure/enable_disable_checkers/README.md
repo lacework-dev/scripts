@@ -22,7 +22,7 @@ This script also generates an updated version of the checker maps based on the r
 ### Example of end-to-end usage to disable all report checks and enable the new ones
 
 ```
-python -V
+python3 -V
 #check you are running at least python 3.8
 lacework configure show
 #if CLI is not installed, do: 
