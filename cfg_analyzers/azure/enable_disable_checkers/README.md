@@ -18,3 +18,26 @@ Where the first argument is the action you wish to perform, and the second argum
 If the Lacework CLI is not configured to the same lacework-tenant provided in the ARGs the command will fail.
 
 This script also generates an updated version of the checker maps based on the recommendations(checkers) deployed to the target environment.
+
+### Example of end-to-end usage to disable all report checks and enable the new ones
+
+```
+python -V
+#check you are running at least python 3.8
+lacework configure show
+#if CLI is not installed, do: 
+#curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash
+#lacework configure
+
+wget https://raw.githubusercontent.com/lacework-dev/scripts/main/cfg_analyzers/azure/enable_disable_checkers/azure-cis-config.py
+TENANT=yourtenantname
+python3 azure-cis-config.py -h
+python3 azure-cis-config.py disable_all $TENANT
+python3 azure-cis-config.py enable_cis_131 $TENANT
+python3 azure-cis-config.py enable_lw_custom $TENANT
+```
+
+Once the new rules have been activated, either wait 24h or manually run a new Compliance Report. The old CIS 1.0 will be disabled, only CIS 1.3.1 will have data.
+```
+lacework compliance azure run-assessment $(lacework compliance azure list-tenants --json | jq -r ".azure_tenants[0]")
+```
