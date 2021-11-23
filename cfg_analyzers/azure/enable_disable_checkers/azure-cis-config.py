@@ -38,7 +38,7 @@ def generate_checker_map(flag):
             and "azure_cis_" in checker.lower())
     ]
     checkers_lw_custom = [
-        checker for checker in checkers if ("lw_azure_" in checker.lower())
+        checker for checker in checkers if ("azure_lw_" in checker.lower())
     ]
 
     checkers_131.sort()
