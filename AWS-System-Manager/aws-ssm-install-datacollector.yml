@@ -6,6 +6,10 @@ mainSteps:
     runCommand:
     - |
       #!/usr/bin/env bash
+      
+      # NOTE: The canonical version of the script below is part of the Lacework AWS Terraform Module:
+      # https://github.com/lacework/terraform-aws-ssm-agent/blob/73f85b6141a229f69d43a38bdb7ae43d2b7908be/setup_lacework_agent.sh
+      
       set -e
       LACEWORK_INSTALL_PATH="{{ LaceworkInstallPath }}"
       # TODO: Fetch the token from AWS SSM Parameter Store instead of taking it in as a Command parameter (avoid leaks in the AWS Console)
