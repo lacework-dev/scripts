@@ -4,7 +4,7 @@ This is the AWS Systems Manager document created by the [Lacework Terraform modu
 shops that don't/can't/won't use Terraform.
 
 To use the SSM doc:
- - Replace `default: <YOUR TOKEN>` with your [AWS Agent Access Token](https://docs.lacework.com/create-agent-access-tokens-and-download-agent-installers)
+ - Replace `default: <YOUR TOKEN>` with your [Lacework Agent Access Token](https://docs.lacework.com/create-agent-access-tokens-and-download-agent-installers)
  - Create an [AWS SSM Document](https://docs.aws.amazon.com/systems-manager/latest/userguide/create-ssm-doc.html).
  - If desired, restrict the installation scope using tags, etc.  
  - Publish the AWS SSM document
