@@ -10,3 +10,7 @@ To use the SSM doc:
  - Publish the AWS SSM document
  - ???
  - Profit!
+
+NOTE: The canonical version of the script below is part of the Lacework AWS Terraform Module:
+
+https://github.com/lacework/terraform-aws-ssm-agent/blob/73f85b6141a229f69d43a38bdb7ae43d2b7908be/setup_lacework_agent.sh
