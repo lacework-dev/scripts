@@ -1,5 +1,3 @@
-import csv, re, sys, getopt, os, time
-
 # Use-case: scanning a Docker v2 registry that cannot do auto-polling https://docs.lacework.com/integrate-a-docker-v2-registry#container-registry-support
 # First, integrate a Container Registry of Docker v2 kind, no need for registry notifications, maybe enable Non-OS Package support
 # Then go to Lacework > Resources >  Containers >  Container Image Information and download as CSV
@@ -9,41 +7,70 @@ import csv, re, sys, getopt, os, time
 
 # PRE-REQUISITES: Install and configure the Lacework CLI https://docs.lacework.com/cli/
 
-def main(argv):
-    inputfile = ''
-    registry = ''
-        #registry="myrepo.com"
-        #filename="containers_container_image_information.csv"
-
-    try:
-        opts, args = getopt.getopt(argv,"hi:r:",["ifile=","registry="])
-    except getopt.GetoptError:
-        print ('USAGE: -i <inputfile> -r <registry>')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print ('USAGE: -i <inputfile> -r <registry>')
-            sys.exit()
-        elif opt in ("-i", "--ifile"):
-            inputfile = arg
-        elif opt in ("-r", "--registry"):
-            registry = arg
-    print ('Input file is "', inputfile)
-    print ('Registry is "', registry)
+from typing import List
+from dataclasses import dataclass
+from sys import argv
+import subprocess
+import csv
 
 
-    with open(inputfile, newline='') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            #print(row[0],row[1])
-            m=re.match("%s\/(.*)$"%registry,row[0]) #only scan containers from the docker v2 repo we integrated in Lacework
-            eval_guid=row[11]
-            if m and eval_guid=="": #avoid already assessed images
-                print ("lacework vulnerability container scan %s %s %s" % (registry, m.group(1), row[1]))
-                os.system ("lacework vulnerability container scan %s %s %s" % (registry, m.group(1), row[1]))
-                #lacework vulnerability container scan <registry> <repository> <tag|digest> [flags]
-                time.sleep(1)
+@dataclass
+class DockerImage:
+    registry: str
+    repository: str
+    tag: str
 
 
-if __name__ == "__main__":
-   main(sys.argv[1:])
+def _get_docker_images(customer_registry_name, reader) -> List[DockerImage]:
+    supported_entries = []
+
+    for entry in reader:
+        entry_details = entry[0].split('/', 1)
+        registry_name = entry_details[0]
+
+        if registry_name != customer_registry_name:
+            continue
+
+        repository_name = entry_details[1]
+        tag = entry[1]
+
+        docker_image = DockerImage(registry_name, repository_name, tag)
+        supported_entries.append(docker_image)
+
+    return supported_entries
+
+
+def _get_supported_images(filename, customer_registry_name) -> List[DockerImage]:
+    with open(filename, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)
+
+        supported_images = _get_docker_images(customer_registry_name, reader)
+
+    return supported_images
+
+
+def run_scan(profile_name, supported_images) -> None:
+    for image in supported_images:
+        registry = image.registry
+        repository = image.repository
+        tag = image.tag
+
+        command = f'lacework vulnerability -p {profile_name} container scan {registry} {repository} {tag}'
+        print(f'Running: {command}')
+        split_command = command.split()
+        output = subprocess.run(split_command, check=True, capture_output=True, text=True).stdout
+        print(output)
+
+
+def main() -> None:
+    profile_name = argv[1]
+    filename = argv[2]
+    customer_registry_name = argv[3]
+
+    supported_images = _get_supported_images(filename, customer_registry_name)
+    run_scan(profile_name, supported_images)
+
+
+if __name__ == '__main__':
+    main()
