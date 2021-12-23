@@ -6,6 +6,7 @@
 
 # Set the initial counts to zero.
 AZURE_VMS=0
+AZURE_VMSS=0
 SQL_SERVERS=0
 LOAD_BALANCERS=0
 GATEWAYS=0
@@ -25,6 +26,10 @@ function getResourceGroups {
 
 function getVMs {
   az vm list -d --query "[?powerState=='VM running']" | jq length
+}
+
+function getVMSS {
+  az vmss list  --query "[].sku.capacity" | jq add
 }
 
 function getSQLServers {
@@ -57,6 +62,10 @@ for sub in $(getSubscriptions); do
   vms=$(getVMs)
   AZURE_VMS=$(($AZURE_VMS + $vms))
 
+  echo "Fetching VM Scale Sets..."
+  vmss=$(getVMSS)
+  AZURE_VMSS=$(($AZURE_VMSS + $vmss))
+
   echo "Fetching SQL Databases..."
   sql=$(getSQLServers)
   SQL_SERVERS=$(($SQL_SERVERS + $sql))
@@ -79,9 +88,10 @@ echo "######################################################################"
 echo "Lacework inventory collection complete."
 echo ""
 echo "Azure VMs:         $AZURE_VMS"
+echo "Azure VMSS:        $AZURE_VMSS"
 echo "SQL Servers:       $SQL_SERVERS"
 echo "Load Balancers:    $LOAD_BALANCERS"
 echo "Vnet Gateways:     $GATEWAYS"
 echo "===================="
-echo "Total Resources:   $(($AZURE_VMS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS))"
+echo "Total Resources:   $(($AZURE_VMS + $AZURE_VMSS + $SQL_SERVERS + $LOAD_BALANCERS + $GATEWAYS))"
 
