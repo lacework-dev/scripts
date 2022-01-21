@@ -9,7 +9,7 @@
 # 2. The script takes a while to run in large accounts with many resources, the final count is an aggregation of all resources found.
 
 
-AWS_PROFILE=lacework
+AWS_PROFILE=default
 
 # Usage: ./lw_aws_inventory.sh
 while getopts ":jp:" opt; do
