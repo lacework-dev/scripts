@@ -37,11 +37,17 @@ The user executing the script must have roles/cloudassset.viewer and roles/servi
 
 Script requires access to cloudasset API.
 
-### A) We recommend granting at the org level:
+### A) We recommend granting for all projects in the org:
 
-`gcloud --organization <organization_id> services enable cloudasset.googleapis.com`
+1. Download the script cloudasset_enable.sh
 
-### B) Alternative is granting for each project to be examined:
+wget https://github.com/lacework-dev/scripts/blob/main/resource_management/gcp/cloudasset_enable.sh
+
+2. Run the script:
+
+`chmod +x ./cloudasset_enable.sh; mkdir -p /tmp/lacework; ./cloudasset_enable.sh 2>&1 | tee /tmp/lacework/enable_output`
+
+### B) Alternative is manually granting for each project to be examined:
 
 `gcloud --project <project_id> services enable cloudasset.googleapis.com`
 
@@ -60,6 +66,6 @@ wget https://github.com/lacework-dev/scripts/blob/main/resource_management/gcp/g
 Summary output is displayed on screen.
 When the script finishes, we recommend uploading the contents of directory:
 
-`/tmp/lacework/output`
+`/tmp/lacework/`
 
-This can be done in GCP cloud shell by clicking on the more icon (vertial '...') and selecting download.
+This can be done in GCP cloud shell by clicking on the more icon (vertical '...') and selecting download.
