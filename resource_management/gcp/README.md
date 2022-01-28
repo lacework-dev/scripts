@@ -49,7 +49,7 @@ Script requires access to cloudasset API.
 
 1. Download the script:
 
-wget <script url>
+wget https://github.com/lacework-dev/scripts/blob/main/resource_management/gcp/gcp_asset_breakdown.sh
 
 2. Run the script:
 
