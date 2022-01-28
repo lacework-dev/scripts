@@ -11,7 +11,10 @@ We recommend using the [gcp cloud shell](https://console.cloud.google.com/home/d
 
 # Roles
 
-The user executing the script must have roles/cloudassset.viewer and roles/serviceusage.serviceUsageConsumer on the parent of the resources to be examined.
+If your account has roles/cloudasset.owner or roles/owner on the resource's parent, it has sufficient permissions.
+Please skip to the section API enablement.
+
+Otherwise, the account executing the script must have roles/cloudassset.viewer and roles/serviceusage.serviceUsageConsumer on the parent of the resources to be examined.
 
 ### A) We recommend granting at the org level:
 
