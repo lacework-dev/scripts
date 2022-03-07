@@ -45,7 +45,7 @@ LAMBDA_FNS=0
 LAMBDA_FNS_EXIST="No"
 
 function getRegions {
-  aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws --profile $profile --region us-east-1 ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
