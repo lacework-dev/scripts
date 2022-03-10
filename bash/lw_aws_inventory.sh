@@ -10,6 +10,7 @@
 
 
 AWS_PROFILE=default
+AWS_MAX_ATTEMPTS=20
 
 # Usage: ./lw_aws_inventory.sh
 while getopts ":jp:" opt; do
