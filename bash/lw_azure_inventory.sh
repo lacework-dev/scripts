@@ -12,7 +12,7 @@ LOAD_BALANCERS=0
 GATEWAYS=0
 
 function getSubscriptions {
-  az account list | jq -r '.[] | .id'
+  az account list --query "[?name != 'Access to Azure Active Directory']" | jq -r '.[] | .id'
 }
 
 function setSubscription {
@@ -43,10 +43,6 @@ function getLoadBalancers {
 function getGateways {
   RG=$1
   az network vnet-gateway list --resource-group $RG | jq length
-}
-
-function getSubscriptions {
-  az account list | jq -r '.[] | .id'
 }
 
 originalsub=$(az account show | jq -r '.id')
