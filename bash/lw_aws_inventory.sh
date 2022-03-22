@@ -7,15 +7,26 @@
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
 # 2. The script takes a while to run in large accounts with many resources, the final count is an aggregation of all resources found.
+# 3. You can use aws organizations to import a list of all of your connected accounts using the o flag.
 
-
+# Need to modify the IFS value to account for spaces in names
+# Save any existing IFS values in the placeholder
+IFSPLACEHOLDER=$IFS
 AWS_PROFILE=default
 export AWS_MAX_ATTEMPTS=20
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp:" opt; do
+while getopts ":jop:" opt; do
   case ${opt} in
+    o )
+      # The jq parsing from aws organizations output will yield newline delims
+      # Need to modify the IFS to account for that
+      IFS=$'\n'
+      AWS_PROFILE=$(aws organizations list-accounts | jq .[] | jq .[] | jq .Name)
+      ;;
     p )
+      # Need to set the IFS to split only on commas
+      IFS=,
       AWS_PROFILE=$OPTARG
       ;;
     j )
@@ -128,7 +139,7 @@ function calculateInventory {
 
     lambdafns=$(getLambdaFunctions $r $profile)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
-    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
+    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi
 done
 
 TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
@@ -172,10 +183,26 @@ function jsonoutput {
   echo "}"
 }
 
-for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+# Get the number of accounts to iterate over
+PROFCOUNT=0
+for PROFILE in $AWS_PROFILE
 do
+  PROFCOUNT=$(($PROFCOUNT + 1))
+done
+
+# Start an iterator to track progress
+CURRENT=0
+for PROFILE in $AWS_PROFILE
+do
+    CURRENT=$(($CURRENT + 1))
+    # Need to strip the quotes
+    PROFILE=$(echo $PROFILE | sed 's/"//g')
+    echo "Working on" $PROFILE $CURRENT"/"$PROFCOUNT
     calculateInventory $PROFILE
 done
+
+# Reset IFS to whatever it was before we started
+IFS=$IFSPLACEHOLDER
 
 if [ "$JSON" == "true" ]; then
   jsonoutput
