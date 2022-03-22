@@ -6,7 +6,7 @@ This repo provides example JSON body sections to enable and disable the CIS Benc
 This script can be used to bulk enable/disable compliance checkers on your target environment.
 
 ### Pre-requisites
-- Lacework CLI Installed & configured, targeting the desired Lacework tenant (To install and configure the Lacework CLI, follow the [Lacework CLI docs](https://github.com/lacework/go-sdk/wiki/CLI-Documentation#installation))
+- Lacework CLI Installed & configured, targeting the desired Lacework tenant (To install and configure the Lacework CLI, follow the [Lacework CLI docs](https://docs.lacework.com/cli))
 - Python 3.8.10 installed (we recommend using [pyenv virtualenv](https://github.com/pyenv/pyenv-virtualenv) to manage python versions).
   Provided you have pyenv virtualenv installed, you can use `./pyenv-init.sh` to install and activate the required version.
 ### Usage
