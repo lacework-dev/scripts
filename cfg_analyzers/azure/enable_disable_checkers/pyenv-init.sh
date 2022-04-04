@@ -24,7 +24,7 @@ if pyenv -v 1>/dev/null 2>&1 && pyenv virtualenv -h 1>/dev/null 2>&1; then
 		echo "virtualenv: 'python_3.8.10' python: '$PYTHON_VERSION' already activated"
 	fi
 else
-	"missing pyenv/pyenv-virtualenv, please install and try again"
+	echo "missing pyenv/pyenv-virtualenv, please install and try again"
 	exit 1
 fi
 
