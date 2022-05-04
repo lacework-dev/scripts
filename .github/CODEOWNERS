@@ -1,0 +1,29 @@
+# To read more about the purpose of this file, see
+# [About code owners - GitHub docs] (https://shorturl.at/loHL9).
+# To validate the changes made to this file, you can use a tool such as
+# [codeowners-validator: The GitHub CODEOWNERS file validator]
+# (https://shorturl.at/enCNU).
+# Using team's alias instead of individual members requires making changes to
+# the terraform repository (https://github.com/lacework/terraform).
+# Need to add team membership information and specify access to repos.
+# Similar to https://github.com/lacework/terraform/pull/140/files
+# And the team must enable auto assignment under Code review assignment section for
+# all team members to get notified. Please see
+# [Managing code review assignment for your team - GitHub docs]
+# (https://shorturl.at/fovPU).
+# Please file helpdesk tickets to achieve the above.
+
+# !IMPORTANT!
+# Whenever new files and/or folders are added to this repository, please
+# make sure to update this file with the right code owners.
+
+# To add comments, prefix the line with a # followed by a space.
+# Each line is a file pattern followed by one or more owners.
+# Order is important; the last matching pattern takes the most precedence.
+
+/AWS-System-Manager/ @bryancross
+/bash/ @bvboe @marcosgm @lhasadreams @iancrichardson
+/cfg_analyzers/ @rmoles @marcosgm
+/pwsh/ @marcosgm @droessmj
+/scanners/ @marcosgm @shiloam @OzNetNerd
+/test/ @droessmj
