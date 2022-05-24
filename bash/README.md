@@ -36,7 +36,7 @@ chmod +x lw_aws_inventory.sh
 #### Prerequisites
 The following tools are required in order to run the [Azure Inventory Script](./lw_azure_inventory.sh):
 
-- `gcloud`
+- `az`
 - `jq`
 
 #### Permissions Required
