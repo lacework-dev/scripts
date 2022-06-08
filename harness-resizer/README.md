@@ -21,6 +21,6 @@ HARNESS_API_KEY="XXXXXXXXXXXXXXXX" \
 ```
 
 ## TODO 
-- [ ] Add links to relevant Grafana/Honeycomb dashboards to the PR message.
+- [X] Add links to relevant Grafana/Honeycomb dashboards to the PR message.
 - [ ] Add support for multiple container recommendations.
 - [ ] Deploy to a GitHub action.

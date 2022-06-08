@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+import re
 from typing import List
 
 import click
@@ -51,15 +52,18 @@ class HarnessRecommenderBot:
             for rec in recs:
                 yield rec
 
-    def get_pr_body(self, rec: HarnessRecommendationDetail) -> str:
+    def get_grafana_link(self, cluster : str, workload : str) -> str:
+        return f"https://grafana.lacework.teleport.sh/d/maWI3lA7z/resource-utilization?orgId=1&refresh=1m&var-datasource={cluster}&var-namespace=default&var-workload={workload}&from=1653367120733&to=1653410320733"
+
+    def get_pr_body(self, rec: HarnessRecommendationDetail, normalized_cluster : str, workload : str) -> str:
         return (
             "[Harness](https://docs.harness.io/article/rr85306lq8-continuous-efficiency-overview) detected that certain workloads were over-allocated memory and cpu resources. "
-            + "This PR has been automatically generated to reduce resource requests and limits based on historical data. Please review the Harness dashboard for this workload, "
+            + "This PR has been automatically generated to reduce resource requests and limits based on historical data. Please review the Harness dashboard for this workload "
             + "and approve/reject/alter this PR accordingly.\n\n"
             + f"* [Harness Dashboard]({rec.get_url(self.harness_client.account_identifier)})\n"
+            + f"* [Grafana Dashboard]({self.get_grafana_link(normalized_cluster, workload)})\n"
             + "* Ask questions in #harness-resizer on Slack\n"
         )
-
 
 @click.group
 @click.option(
@@ -141,6 +145,13 @@ async def list_improvements(
     )
     print(table)
 
+def normalize_cluster_name(name : str) -> str:
+    if match := re.search("lacework-prod-(.*)", name, re.IGNORECASE):
+        return match.group(1)
+    return name
+
+def normalize_resource_name(name : str) -> str:
+    return name.replace("-", "_")
 
 @cli.command()
 @click.option("--minimum_savings", default=100)
@@ -205,17 +216,20 @@ async def generate_prs_interactive(bot: HarnessRecommenderBot, minimum_savings: 
         click.echo("== Recommended Changes ==")
         print(table)
 
+        cluster_name = normalize_cluster_name(rec.recommendation.clusterName)
+        resource_name = normalize_resource_name(rec.recommendation.resourceName)
+
         # Set the values
         resource_file = bot.helm_repository.get_resource_file_for_cluster(
-            cluster=rec.recommendation.clusterName
+            cluster=cluster_name
         )
-        container_resources = resource_file[rec.recommendation.resourceName]
+        container_resources = resource_file[resource_name]
         if click.confirm(
             "\nDo you want to propose the recommended changes?", default=True
         ):
             container_resources[container] = container.p99
         elif click.confirm("\nDo you want to propose custom changes?", default=True):
-            resource_file[rec.recommendation.resourceName] = ResourceSpecification(
+            resource_file[resource_name] = ResourceSpecification(
                 limits=ResourceCount(
                     cpu=click.prompt(
                         "CPU Limit: ", default=container.current.limits.cpu
@@ -238,12 +252,12 @@ async def generate_prs_interactive(bot: HarnessRecommenderBot, minimum_savings: 
 
         # Generate a PR
         pr_res = bot.helm_repository.create_resource_change_pr(
-            cluster=rec.recommendation.clusterName,
+            cluster=cluster_name,
             file=resource_file,
-            commit_message=f"perf: [harness bot] resizing {rec.recommendation.resourceName} in {rec.recommendation.clusterName}",
+            commit_message=f"perf: [harness bot] resizing {rec.recommendation.resourceName} in {cluster_name}",
             commit_branch=rec.get_head_branch(),
-            pr_title=f"[Harness Bot] Resizing {rec.recommendation.resourceName} in {rec.recommendation.clusterName}",
-            pr_body=bot.get_pr_body(rec),
+            pr_title=f"[Harness Bot] Resizing {rec.recommendation.resourceName} in {cluster_name}",
+            pr_body=bot.get_pr_body(rec, cluster_name, rec.recommendation.resourceName),
         )
 
         # Success!
