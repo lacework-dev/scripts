@@ -2,7 +2,7 @@
 
 import asyncio
 import re
-from typing import List
+from typing import List, Optional
 
 import click
 from prettytable import PrettyTable
@@ -28,7 +28,7 @@ class HarnessRecommenderBot:
     ) -> List[HarnessRecommendationDetail]:
         # Get list of recommendations matching criteria
         recommendations = await self.harness_client.list_recommendations(
-            limit=limit, minimum_savings=minimum_savings
+            limit=limit, minimum_savings=minimum_savings, offset=offset
         )
 
         # Fetch the details of these recommendations (in chunks)
@@ -41,21 +41,44 @@ class HarnessRecommenderBot:
 
         return recommendation_details
 
-    async def gen_recommendations(self, minimum_savings: int, batch_size: int = 10):
+    async def gen_recommendations(
+        self,
+        minimum_savings: int,
+        batch_size: int = 10,
+        cluster_pattern: Optional[str] = None,
+        resource_pattern: Optional[str] = None,
+    ):
         offset = 0
         while True:
             recs = await self.get_recommendations(
                 limit=batch_size, offset=offset, minimum_savings=minimum_savings
             )
+            offset += batch_size
             if len(recs) == 0:
                 raise StopAsyncIteration()
             for rec in recs:
+                if (cluster_pattern is not None) and (
+                    not re.match(cluster_pattern, rec.recommendation.clusterName)
+                ):
+                    click.echo(
+                        f"Per cluster pattern, skipping {rec.recommendation.resourceName} in {rec.recommendation.clusterName}"
+                    )
+                    continue
+                if (resource_pattern is not None) and (
+                    not re.match(resource_pattern, rec.recommendation.resourceName)
+                ):
+                    click.echo(
+                        f"Per resource pattern, skipping {rec.recommendation.resourceName} in {rec.recommendation.clusterName}"
+                    )
+                    continue
                 yield rec
 
-    def get_grafana_link(self, cluster : str, workload : str) -> str:
+    def get_grafana_link(self, cluster: str, workload: str) -> str:
         return f"https://grafana.lacework.teleport.sh/d/maWI3lA7z/resource-utilization?orgId=1&refresh=1m&var-datasource={cluster}&var-namespace=default&var-workload={workload}&from=1653367120733&to=1653410320733"
 
-    def get_pr_body(self, rec: HarnessRecommendationDetail, normalized_cluster : str, workload : str) -> str:
+    def get_pr_body(
+        self, rec: HarnessRecommendationDetail, normalized_cluster: str, workload: str
+    ) -> str:
         return (
             "[Harness](https://docs.harness.io/article/rr85306lq8-continuous-efficiency-overview) detected that certain workloads were over-allocated memory and cpu resources. "
             + "This PR has been automatically generated to reduce resource requests and limits based on historical data. Please review the Harness dashboard for this workload "
@@ -64,6 +87,7 @@ class HarnessRecommenderBot:
             + f"* [Grafana Dashboard]({self.get_grafana_link(normalized_cluster, workload)})\n"
             + "* Ask questions in #harness-resizer on Slack\n"
         )
+
 
 @click.group
 @click.option(
@@ -145,20 +169,34 @@ async def list_improvements(
     )
     print(table)
 
-def normalize_cluster_name(name : str) -> str:
+
+def normalize_cluster_name(name: str) -> str:
     if match := re.search("lacework-prod-(.*)", name, re.IGNORECASE):
         return match.group(1)
     return name
 
-def normalize_resource_name(name : str) -> str:
+
+def normalize_resource_name(name: str) -> str:
     return name.replace("-", "_")
+
 
 @cli.command()
 @click.option("--minimum_savings", default=100)
+@click.option("--resource_pattern", type=str, default=None)
+@click.option("--cluster_pattern", type=str, default=None)
 @click.pass_obj
 @coro
-async def generate_prs_interactive(bot: HarnessRecommenderBot, minimum_savings: int):
-    async for rec in bot.gen_recommendations(minimum_savings=minimum_savings):
+async def generate_prs_interactive(
+    bot: HarnessRecommenderBot,
+    minimum_savings: int,
+    cluster_pattern: str,
+    resource_pattern: str,
+):
+    async for rec in bot.gen_recommendations(
+        minimum_savings=minimum_savings,
+        cluster_pattern=cluster_pattern,
+        resource_pattern=resource_pattern,
+    ):
         # TODO Handle multiple containers
         if len(rec.containers) > 1:
             continue
