@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Any, List
+from typing import Any, List, Dict
 from functools import cache
 
 import oyaml as yaml
@@ -89,8 +89,7 @@ class HelmRepository:
 
     def create_resource_change_pr(
         self,
-        cluster: str,
-        file: HelmResourcesFile,
+        files: Dict[str, HelmResourcesFile],
         commit_message: str,
         commit_branch: str,
         pr_title: str,
@@ -105,14 +104,15 @@ class HelmRepository:
             ref=f"refs/heads/{commit_branch}", sha=source_branch.commit.sha
         )
 
-        # Modify a file in that branch
-        update_file_res = self.repo.update_file(
-            path=self.get_cluster_resources_path(cluster),
-            message=commit_message,
-            content=file.to_yaml(),
-            sha=file.original_sha,
-            branch=commit_branch,
-        )
+        # Modify files in that in that branch
+        for cluster, file in files.items():
+            self.repo.update_file(
+                path=self.get_cluster_resources_path(cluster),
+                message=commit_message,
+                content=file.to_yaml(),
+                sha=file.original_sha,
+                branch=commit_branch,
+            )
 
         # Create a Pull Request
         create_pr_res = self.repo.create_pull(

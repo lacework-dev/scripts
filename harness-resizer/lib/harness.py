@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-from typing import Dict, List, Optional, ClassVar
-
-import base64
-import hashlib
+from asyncio import Task
+from typing import Dict, List, Optional
 
 from functools import cache
 from datetime import datetime, timedelta
@@ -14,7 +12,7 @@ from dataclasses_json import dataclass_json, Undefined
 import aiohttp
 
 from .utils import coalesce
-from .structs import ResourceCount, ResourceSpecification
+from .structs import ResourceCount, ResourceSpecification, ClusterType
 
 
 class HarnessException(Exception):
@@ -81,13 +79,9 @@ class HarnessRecommendationDetail_ForContainer:
             memory_pct=((cur_mem - rec_mem) / rec_mem) * 100,
         )
 
-
 @dataclass_json()
 @dataclass
 class HarnessRecommendationDetail:
-    # WARNING: Changing this could result in duplicate PRs
-    SHORT_HASH_LENGTH: ClassVar[int] = 10
-
     id: str
     recommendation: HarnessRecommendation
     containers: Dict[str, HarnessRecommendationDetail_ForContainer]
@@ -100,21 +94,25 @@ class HarnessRecommendationDetail:
         )
 
     def get_url(self, account_identifier: str) -> str:
-        return f"https://app.harness.io/ng/#/account/{account_identifier}/ce/recommendations/{self.id}/name/gbm/details"
+        return f"https://app.harness.io/ng/#/account/{account_identifier}/ce/recommendations/{self.id}"
 
-    def get_short_hash(self) -> str:
-        """
-        This hash is used to de-duplicate branches and PRs on Github.
-        """
-        hasher = hashlib.sha256(self.id.encode("utf-8"))
-        return (str(hasher.hexdigest()))[: self.SHORT_HASH_LENGTH]
-
-    def get_head_branch(self) -> str:
-        """
-        The branch name used for committing changes to Github
-        """
-        return f"harness_{self.get_short_hash()}"
-
+    def get_cluster_type(self) -> ClusterType:
+        cluster_str = self.recommendation.clusterName
+        if cluster_str == "dev2-Cost-access":
+            return ClusterType.OTHER
+        if "euprod" in cluster_str:
+            return ClusterType.EU_PROD
+        if "preprod" in cluster_str:
+            return ClusterType.PREPROD
+        if "perf" in cluster_str:
+            return ClusterType.PROD_REPLICA
+        if "prod" in cluster_str:
+            return ClusterType.US_PROD
+        if "spork" in cluster_str:
+            return ClusterType.SPORK
+        if ("dev" in cluster_str) or ("autopush" in cluster_str):
+            return ClusterType.DEV
+        return ClusterType.OTHER
 
 class HarnessClient:
     account_identifier: str
@@ -129,15 +127,16 @@ class HarnessClient:
         return {"x-api-key": self.api_key}
 
     async def list_recommendations(
-        self, limit: int = 100, offset: int = 0, minimum_savings=0
+        self, limit: int = 100, offset: int = 0, minimum_savings: Optional[int] = None
     ) -> List[HarnessRecommendation]:
         params = {"accountIdentifier": self.account_identifier}
         json = {
             "resourceTypes": ["WORKLOAD"],
             "limit": limit,
             "offset": offset,
-            "minSavings": minimum_savings,
         }
+        if minimum_savings is not None:
+            json["minSavings"] = minimum_savings
 
         async with aiohttp.ClientSession(headers=self.get_headers()) as session:
             async with session.post(
@@ -170,7 +169,7 @@ class HarnessClient:
         self,
         recommendation: HarnessRecommendation,
         data_range: Optional[timedelta] = None,
-    ):
+    ) -> Task[HarnessRecommendationDetail]:
         from_delta = timedelta(30) if data_range is None else data_range
         from_date = datetime.now() - from_delta
 
