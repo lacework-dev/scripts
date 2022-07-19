@@ -76,6 +76,8 @@ function checkStatusByRegion () {
   done
 }
 
+function isAssumedRole() {
+  aws sts get-caller-identity | jq -r '.Arn | contains(":assumed-role/")'
 }
 
 function getSessionToken () {
@@ -127,6 +129,7 @@ else
 fi
 
 RESULT_REGIONS=""
+isAssumedRole=$(isAssumedRole)
 vpcQuotaStatuses="$(getVpcQuotaStatus)"
 vpcIntGatewayQuotaStatuses="$(getVpcIntGatewayQuotaStatus)"
 echo "Gathering enabled regions..."
@@ -137,8 +140,8 @@ for region in $(getEnabledRegions); do
   skip=false
 
   # Check that STS is enabled
-  if [[ -z $(getSessionToken $region) ]]; then
-    echo "${NO}  STS Service"
+  if [[ $isAssumedRole == false ]] && [[ -z $(getSessionToken $region) ]]; then
+    echo "${NO}  STS Service appears to be disabled, excluding region."
     skip=true
   fi
 
