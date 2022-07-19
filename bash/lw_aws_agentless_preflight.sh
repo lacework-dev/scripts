@@ -76,14 +76,6 @@ function checkStatusByRegion () {
   done
 }
 
-function echoStatus () {
-  if [ "${1}" == "ok" ]; then
-    echo "${OK}  ${2}"
-  elif [ "$1" == "warning" ]; then
-    echo "${WARN}  ${2}"
-  elif [ "$1" == "error" ]; then
-    echo "${NO}  ${2}"
-  fi
 }
 
 function getSessionToken () {
