@@ -140,10 +140,10 @@ for region in $(getEnabledRegions); do
   skip=false
 
   # Check that STS is enabled
-  if [[ $isAssumedRole == false ]] && [[ -z $(getSessionToken $region) ]]; then
-    echo "${NO}  STS Service appears to be disabled, excluding region."
-    skip=true
-  fi
+  # if [[ $isAssumedRole == false ]] && [[ -z $(getSessionToken $region) ]]; then
+  #   echo "${NO}  STS Service appears to be disabled, excluding region."
+  #   skip=true
+  # fi
 
   # Check VPC Quota
   status=$(checkStatusByRegion $region $vpcQuotaStatuses)
