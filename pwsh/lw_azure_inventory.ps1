@@ -60,14 +60,22 @@ az config set extension.use_dynamic_install=yes_without_prompt *> $null
 $subscriptions = getSubscriptions
 
 foreach ($s in $subscriptions) {
-    Write-Host "Getting Inventory of [$($s.name)]"
-    $s.setSubscription()
+    Try {
+        Write-Host "Getting Inventory of [$($s.name)]..." -NoNewline
+        $s.setSubscription()
 
-    $s.getVMs()
-    $s.getVMScaleSets()
-    $s.getSQLServers()
-    $s.getLoadBalancers()
-    $s.getGateways()
+        $s.getVMs()
+        $s.getVMScaleSets()
+        $s.getSQLServers()
+        $s.getLoadBalancers()
+        $s.getGateways()
+
+        Write-Host "DONE!" -ForegroundColor Green
+    }
+
+    Catch {
+        Write-Host "Failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
 
 Write-Host @"
