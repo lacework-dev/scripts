@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/local/bin/pwsh
 # Script to fetch Azure inventory for Lacework sizing.
 # Requirements: az cli
 
@@ -6,76 +6,80 @@
 param
 (
     [CmdletBinding()]
-    [bool] $json = $false,
+    [bool]$json = $false,
 
     # enable verbose output
     [CmdletBinding()]
-    [bool] $v = $false
+    [bool]$v = $false
 )
 
-# Set the initial counts to zero.
-$global:AZURE_VMS=0
-$global:SQL_SERVERS=0
-$global:LOAD_BALANCERS=0
-$global:GATEWAYS=0
-
-function getVMs {
-  $(az vm list -d --query "[?powerState=='VM running']" | ConvertFrom-Json).Count
+function getSum([int[]]$field) {
+    $($field | Measure-Object -Sum).Sum
 }
 
-function getSQLServers {
-  $(az sql server list | ConvertFrom-Json).Count
+function flatten($fields) {
+    [int[]]@($fields | ForEach-Object { $_ })
 }
 
-function getLoadBalancers {
-  $(az network lb list | ConvertFrom-Json).Count
+function getSummary([psobject[]]$report) {
+    Write-Host "`r`nSummary"
+    Write-Host "===================="
+    Write-Host "Azure VMs:      $(getSum($report.AZURE_VMS))"
+    Write-Host "Azure VMSS:     $(getSum($report.VM_SCALE_SETS))"
+    Write-Host "SQL Servers:    $(getSum($report.SQL_SERVERS))"
+    Write-Host "Load Balancers: $(getSum($report.LOAD_BALANCERS))"
+    Write-Host "Vnet Gateways:  $(getSum($report.GATEWAYS))"
+    Write-Host "===================="
+    Write-Host "Total Resources: $(getSum(flatten($report.AZURE_VMS, $report.VM_SCALE_SETS, $report.SQL_SERVERS, $report.LOAD_BALANCERS, $report.GATEWAYS)))"
 }
 
-write-host "Starting inventory check."
-write-host "Fetching VMs..."
-$vms=$(getVMs)
-$global:AZURE_VMS=$(($global:AZURE_VMS + $vms))
+function getSubscriptions {
+    $subscriptions = &az account list | ConvertFrom-Json | Where-Object { $_.State -eq 'Enabled' }
 
-write-host "Fetching SQL Databases..."
-$sql=$(getSQLServers)
-$global:SQL_SERVERS=$(($global:SQL_SERVERS + $sql))
+    $subscriptions | Add-Member -MemberType NoteProperty -Name "AZURE_VMS" -Value 0
+    $subscriptions | Add-Member -MemberType NoteProperty -Name "VM_SCALE_SETS" -Value 0
+    $subscriptions | Add-Member -MemberType NoteProperty -Name "SQL_SERVERS" -Value 0
+    $subscriptions | Add-Member -MemberType NoteProperty -Name "LOAD_BALANCERS" -Value 0
+    $subscriptions | Add-Member -MemberType NoteProperty -Name "GATEWAYS" -Value 0
 
-write-host "Fetching Load Balancers..."
-$lbs=$(getLoadBalancers)
-$global:LOAD_BALANCERS=$(($global:LOAD_BALANCERS + $lbs))
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name setSubscription -Value { &az account set --subscription $this.id }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getResourceGroups -Value { &az group list | ConvertFrom-Json | Select-Object -ExpandProperty name }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getVMs -Value { $this.AZURE_VMS = $(&az vm list -d --query "[?powerState=='VM running']" | ConvertFrom-Json).Count }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getVMScaleSets -Value { $this.VM_SCALE_SETS = $(&az vmss list  --query "[].sku.capacity" | ConvertFrom-Json).Count }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getSQLServers -Value { $this.SQL_SERVERS = $(&az sql server list | ConvertFrom-Json).Count }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getLoadBalancers -Value { $this.LOAD_BALANCERS = $(&az network lb list | ConvertFrom-Json).Count }
+    $subscriptions | Add-Member -MemberType ScriptMethod -Name getGateways -Value { $this.GATEWAYS = $(&az graph query -q "Resources | where type =~ 'Microsoft.Network/virtualNetworkGateways' | summarize count=count()" | ConvertFrom-Json).data.count }
 
-write-host "Fetching Gateways..."
+    return $subscriptions
+}
+
 # Microsoft.Network/virtualNetworkGateways
 # need to run this to avoid an interactive prompt to use the resource graph extension
 # -- dump output to null as it currently warns that "az config" is experimental...
 az config set extension.use_dynamic_install=yes_without_prompt *> $null
-$global:GATEWAYS= $(az graph query -q "Resources | where type =~ 'Microsoft.Network/virtualNetworkGateways' | summarize count=count()" | ConvertFrom-Json).data.count
+$subscriptions = getSubscriptions
 
+foreach ($s in $subscriptions) {
+    Write-Host "Getting Inventory of [$($s.name)]"
+    $s.setSubscription()
 
-function textoutput {
-  write-output "######################################################################"
-  write-output "Lacework inventory collection complete."
-  write-output ""
-  write-output "Azure VMs:         $global:AZURE_VMS"
-  write-output "SQL Servers:       $global:SQL_SERVERS"
-  write-output "Load Balancers:    $global:LOAD_BALANCERS"
-  write-output "Vnet Gateways:     $global:GATEWAYS"
-  write-output "===================="
-  write-output "Total Resources:   $(($global:AZURE_VMS + $global:SQL_SERVERS + $global:LOAD_BALANCERS + $global:GATEWAYS))"
+    $s.getVMs()
+    $s.getVMScaleSets()
+    $s.getSQLServers()
+    $s.getLoadBalancers()
+    $s.getGateways()
 }
 
-function jsonoutput {
-  write-output "{"
-  write-output  "  `"vms`": `"$global:AZURE_VMS`","
-  write-output  "  `"sqlservers`": `"$global:SQL_SERVERS`","
-  write-output  "  `"lb`": `"$global:LOAD_BALANCERS`","
-  write-output  "  `"vnetgw`": `"$global:GATEWAYS`","
-  Write-output  "  `"total`": `"$($global:AZURE_VMS + $global:SQL_SERVERS + $global:LOAD_BALANCERS + $global:GATEWAYS)`""
-  write-output  "}"
-}
+Write-Host @"
+######################################################################
+Lacework inventory collection complete.
+"@
 
-if ($json -eq $true){
-  jsonoutput
+$report = $subscriptions | Select-Object -Property name, id, AZURE_VMS, VM_SCALE_SETS, SQL_SERVERS, LOAD_BALANCERS, GATEWAYS
+
+if ($json){
+    $report | ConvertTo-Json
 }else{
-  textoutput
+    $report | Format-Table
+    getSummary($report)
 }
