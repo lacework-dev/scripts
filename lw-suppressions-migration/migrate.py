@@ -63,7 +63,7 @@ def createPayload (awssupppresions, awsmap, awsexceptions):
             # print ("+++Policy ID ",k)
             for field,value in v["suppressionConditions"][0].items():
                 if len(value)>0:
-                    print ("+++++",field, value)
+                    # print ("+++++",field, value)
                     constraint={}
                     constraint["fieldKey"]=field
                     if "ALL_" in str(value):
