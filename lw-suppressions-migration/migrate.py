@@ -53,6 +53,8 @@ def import_aws_exceptions ():
             mappings[policy]=exception
     return mappings
 
+
+
 def createPayload (awssupppresions, awsmap, awsexceptions):
     payloadsText=[]
     for k,v in awssuppressions.items():
@@ -62,12 +64,19 @@ def createPayload (awssupppresions, awsmap, awsexceptions):
             payload["constraints"]=[]
             # print ("+++Policy ID ",k)
             for field,value in v["suppressionConditions"][0].items():
+                #From https://docs.lacework.com/console/aws-compliance-policy-exceptions-criteria#cis-aws-140---exception-criteria
+                #There are 2 kind of policies, those that ONLY take Account ID, those that also take Resource Names and Resource Tags
                 if len(value)>0:
+                    #print (".....",k, awsmap[k])
+                    if (awsmap[k] in awsexceptions and awsexceptions[awsmap[k]] == "Account Ids"): #protect for the case where the Suppressions CSV doesn't haved a policy that shows up in Mappings
+                        #this LPP policy only supports Account fieldkey
+                        if field != "accountIds":
+                            continue #skip any other fieldKey for policies that only accept Account ID
                     # print ("+++++",field, value)
                     constraint={}
                     constraint["fieldKey"]=field
                     if "ALL_" in str(value):
-                        constraint["fieldValues"]="*"
+                        constraint["fieldValues"]=["*"]
                     else:
                         constraint["fieldValues"]=value
                     payload["constraints"].append(constraint)
