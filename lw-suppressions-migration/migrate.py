@@ -3,10 +3,6 @@
 
 # TODO - deal with non-CIS policies
 
-# TODO - process the known differences in Exception Configs between CIS 1.1 and CIS 1.4 rules from the Lacework Page
-#  [400] fieldKey: regionNames is not applicable to policy lacework-global-53
-#  [400] fieldKey: resourceNames is not applicable to policy lacework-global-76
-
 import csv
 import os
 import re
@@ -34,7 +30,7 @@ def parsePolicyLink (policylink):
     #format  [lacework-global-36](/catalog/policies/lacework-global-36)
     policyp=re.compile("\[([\w-]+)")
     try:
-        policy=policyp.match(policylink)[0]
+        policy=policyp.match(policylink)[1]
     except: 
         raise Exception ("Error parsing policy ID from markup link ", policylink)
     return policy
@@ -49,7 +45,7 @@ def import_aws_exceptions ():
         exception=row[3].strip(" ")
         manualp = re.compile("[Mm]anual") # TODO: simply remove the Manual policies from the CSV
         if not manualp.match(exception): 
-            print(cisrule,'->',policy,":",exception)
+            #print(cisrule,'->',policy,":",exception)
             mappings[policy]=exception
     return mappings
 
@@ -58,6 +54,9 @@ def import_aws_exceptions ():
 def createPayload (awssupppresions, awsmap, awsexceptions):
     payloadsText=[]
     for k,v in awssuppressions.items():
+        #k is AWS_CIS_1_2
+        #v is the suppressions object, inside we can find a suppressionConditions object containing [{'accountIds': ['716829324861'], 'regionNames': ['ALL_REGIONS'], 'resourceNames': [], 'resourceTags': [], 'comments': ''}]
+        #awsmap is the CSV mapping in memory where key=oldCIS and value=newCIS
         if k in awsmap and v["enabled"] and v["suppressionConditions"] is not None:
             payload = {}
             payload["description"]="Migration from old policy "+k
@@ -67,11 +66,14 @@ def createPayload (awssupppresions, awsmap, awsexceptions):
                 #From https://docs.lacework.com/console/aws-compliance-policy-exceptions-criteria#cis-aws-140---exception-criteria
                 #There are 2 kind of policies, those that ONLY take Account ID, those that also take Resource Names and Resource Tags
                 if len(value)>0:
-                    #print (".....",k, awsmap[k])
-                    if (awsmap[k] in awsexceptions and awsexceptions[awsmap[k]] == "Account Ids"): #protect for the case where the Suppressions CSV doesn't haved a policy that shows up in Mappings
-                        #this LPP policy only supports Account fieldkey
-                        if field != "accountIds":
-                            continue #skip any other fieldKey for policies that only accept Account ID
+                    #print (".....",k, awsmap[k],field,value)
+                    #if have both the mapping between old-new and also the suppression fields explanation, then we look for the case where only Account ID is accepted in the new policies
+                    if (awsmap[k] in awsexceptions):
+                        #print (".........",awsmap[k], awsexceptions[awsmap[k]])
+                        if awsexceptions[awsmap[k]] == "Account Ids": #protect for the case where the Suppressions CSV doesn't haved a policy that shows up in Mappings
+                            #this LPP policy only supports Account fieldkey, leave it, but discard the others
+                            if str(field) != "accountIds":
+                                continue #skip any other fieldKey for policies that only accept Account ID
                     # print ("+++++",field, value)
                     constraint={}
                     constraint["fieldKey"]=field
@@ -104,6 +106,5 @@ except:
 print  ("++ Constructing the payload object ++")
 payloads=createPayload(awssuppressions, awsmap, awsexceptions)
 
-#AWS_CIS_1_11   [{'accountIds': ['716829324861'], 'regionNames': ['ALL_REGIONS'], 'resourceNames': [], 'resourceTags': [], 'comments': ''}]
 #▸ Valid constraint keys for aws polices are 'accountIds', 'resourceNames', 'regionNames' and 'resourceTags'`
 
