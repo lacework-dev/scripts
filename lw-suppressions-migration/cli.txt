@@ -1,0 +1,9 @@
+lacework api post '/Exceptions?policyId=lacework-global-68'  -d '{
+  "description": "Except the dev account",
+  "constraints": [
+    {
+      "fieldKey": "accountIds",
+      "fieldValues": ["716829324861"]
+    }
+  ]
+}'
