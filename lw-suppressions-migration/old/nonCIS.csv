@@ -1,0 +1,128 @@
+
+### Lacework Custom Policies for Amazon S3
+
+:::note
+S3 buckets created with the default/recommended AWS settings have ACLs disabled, so those buckets won't match the filter criteria for **LW_S3_1** through **LW_S3_10**.
+:::
+
+Control Number | Available Criteria | Description
+---|---|---
+LW_S3_1 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant 'Everyone' READ permission [list S3 objects]
+LW_S3_2 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant 'Everyone' WRITE permission [create, overwrite, and delete S3 objects]
+LW_S3_3 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant 'Everyone' READ_ACP permission [read bucket ACL]
+LW_S3_4 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant 'Everyone' WRITE_ACP permission [modify bucket ACL]
+LW_S3_5 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant 'Everyone' FULL_CONTROL [READ, WRITE, READ_ACP, WRITE_ACP]
+LW_S3_6 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant AWS users READ permission [list S3 objects]
+LW_S3_7 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant AWS users WRITE permission [create, overwrite, and delete S3 objects]
+LW_S3_8 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant AWS users READ_ACP permission [read bucket ACL]
+LW_S3_9 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant AWS users WRITE_ACP permission [modify bucket ACL]
+LW_S3_10 | Accounts, Bucket Name, Tags | Ensure the S3 bucket ACL does not grant AWS users FULL_CONTROL [READ, WRITE, READ_ACP, WRITE_ACP]
+LW_S3_11 | Accounts, Bucket Name, Tags | Ensure the attached S3 bucket policy does not grant 'Allow' permission to everyone
+LW_S3_12 | Accounts, Bucket Name, Tags | Ensure the S3 bucket requires MFA to delete objects
+LW_S3_13 | Accounts, Bucket Name, Tags | Ensure the S3 bucket has access logging enabled
+LW_S3_14 | Accounts, Bucket Name, Tags | Ensure all data stored in the S3 bucket is securely encrypted at rest
+LW_S3_15 | Accounts, Bucket Name, Tags | Ensure all data is transported from the S3 bucket securely
+LW_S3_16 | Accounts, Bucket Name, Tags | Ensure the S3 bucket has versioning enabled
+LW_S3_17 | Accounts, Bucket Name, Tags | Ensure the S3 bucket access is restricted to a whitelist of IP networks.
+LW_S3_18 | Accounts, Bucket Name, Tags | Ensure the attached S3 bucket policy does not grant global 'Get' permission.
+LW_S3_19 | Accounts, Bucket Name, Tags | Ensure the attached S3 bucket policy does not grant global 'Delete' permission.
+LW_S3_20 | Accounts, Bucket Name, Tags | Ensure the attached S3 bucket policy does not grant global 'List' permission.
+LW_S3_21 | Accounts, Bucket Name, Tags | Ensure the attached S3 bucket policy does not grant global 'Put' permission.
+
+### Lacework Custom Policies for AWS IAM
+
+Control Number | Available Criteria | Description
+---|---|---
+LW_AWS_IAM_1 | Accounts, User Name | Ensure access keys are rotated every 30 days or less  
+LW_AWS_IAM_2 | Accounts, User Name | Ensure access keys are rotated every 45 days or less  
+LW_AWS_IAM_3 | Accounts, User Name/SSH Key | Ensure public ssh keys are rotated every 30 days or less  
+LW_AWS_IAM_4 | Accounts, User Name/SSH Key | Ensure public ssh keys are rotated every 45 days or less  
+LW_AWS_IAM_5 | Accounts, User Name/SSH Key | Ensure public ssh keys are rotated every 90 days or less  
+LW_AWS_IAM_6 | Accounts, User Name | Ensure active access keys are used every 90 days or less  
+LW_AWS_IAM_7 | Accounts, User Name | IAM user should not be inactive from last 30 days or more
+LW_AWS_IAM_8 | Accounts | Ensure IAM configuration has valid Identity Providers configuration
+LW_AWS_IAM_9 | Accounts, Role Name | Ensure IAM Role restrict access to a list of whitelist of IP networks
+LW_AWS_IAM_10 | Accounts, User Name | Ensure IAM User restrict access to a list of whitelist of IP networks
+LW_AWS_IAM_11 | Accounts | Ensure non-root user exists in the account
+LW_AWS_IAM_12 | Accounts, User Name | Ensure access keys are rotated every 350 days or less
+LW_AWS_IAM_13 | Accounts, User Name | Ensure access keys are rotated every 180 days or less
+LW_AWS_IAM_14 | Accounts, User Name | No IAM users with password-based console access should exist
+
+### Lacework Custom Policies for AWS General Security
+
+Control Number | Available Criteria | Description
+---|---|---
+LW_AWS_GENERAL_SECURITY_1 | Accounts, Instance Id, Tags | EC2 instance does not have any tags
+LW_AWS_GENERAL_SECURITY_2 | Accounts, Regions, Volume Id, Tags | Ensure EBS Volumes are Encrypted
+LW_AWS_GENERAL_SECURITY_3 | Accounts, Snapshot Id, Tags | Ensure No Public EBS Snapshots
+LW_AWS_GENERAL_SECURITY_4 | Accounts, RDS Database, Tags | Ensure RDS database is encrypted with customer managed KMS key
+LW_AWS_GENERAL_SECURITY_5 | Accounts, Redshift Cluster, Tags | Ensure Redshift Cluster is encrypted
+LW_AWS_GENERAL_SECURITY_6 | Accounts, Server Certificate ARN | Ensure no server certificate has been uploaded before Heartbleed vulnerability
+LW_AWS_GENERAL_SECURITY_7 | Accounts, ELB, Tags | Ensure ELB has latest Secure Cipher policies Configured for Session Encryption
+LW_AWS_GENERAL_SECURITY_8 | Accounts, ELB, Tags | Ensure ELB is not affected by POODLE Vulnerability (CVE-2014-3566)
+
+### Lacework Custom Policies for AWS Networking
+
+Control Number | Available Criteria | Description
+---|---|---
+LW_AWS_NETWORKING_1 | Accounts, EC2 Instance Id, Tags | Security groups are not attached to an in-use network interface
+LW_AWS_NETWORKING_2 | Accounts, Network ACL ARN, Tags | Network ACLs do not allow unrestricted inbound traffic
+LW_AWS_NETWORKING_3 | Accounts, Network ACL ARN, Tags | Network ACLs do not allow unrestricted outbound traffic
+LW_AWS_NETWORKING_4 | Accounts, VPC Endpoint Id | AWS VPC endpoints should not be exposed
+LW_AWS_NETWORKING_5 | Accounts, Regions, Group Id/Name, Tags | Security Group should not be open to all(unrestricted)
+LW_AWS_NETWORKING_6 | Accounts, Regions, Group Id/Name, Tags | Security Group should not accept traffic other than 80 and 443
+LW_AWS_NETWORKING_7 | Accounts, Regions, Group Id/Name, Tags | Unrestricted Security Group should not be attached to EC2 instance
+LW_AWS_NETWORKING_8 | Accounts, Regions, Group Id/Name, Tags | Unrestricted Security Group should not be attached to RDS database
+LW_AWS_NETWORKING_9 | Accounts, Regions, ENI ARN, Tags | Unrestricted Security Group should not be attached to Network Interface
+LW_AWS_NETWORKING_10 | Accounts, Regions, Group Id/Name, Tags | Unrestricted Security Group should not be attached to Classical Load Balancer
+LW_AWS_NETWORKING_11 | Accounts, Regions, Group Id/Name, Tags | Unrestricted Security Group should not be attached to Application Load Balancer
+LW_AWS_NETWORKING_12 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 9300 (Elasticsearch)
+LW_AWS_NETWORKING_13 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 5601 (Kibana)
+LW_AWS_NETWORKING_14 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 6379 (Redis)
+LW_AWS_NETWORKING_15 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 2379 (etcd)
+LW_AWS_NETWORKING_16 | Accounts, Regions, ELB Id/Name, Tags | ELB SSL Certificate expires in 5 Days
+LW_AWS_NETWORKING_17 | Accounts, Regions, ELB Id/Name, Tags | ELB SSL Certificate expires in 45 Days
+LW_AWS_NETWORKING_18 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 23 (Telnet)
+LW_AWS_NETWORKING_19 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 135 (Windows RPC)
+LW_AWS_NETWORKING_20 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 445 (Windows SMB)
+LW_AWS_NETWORKING_21 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 3306 (MySQL)
+LW_AWS_NETWORKING_22 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 5432 (PostgreSQL)
+LW_AWS_NETWORKING_23 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 1433 (SQLServer)
+LW_AWS_NETWORKING_24 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to UDP port 1434 (SQLServer)
+LW_AWS_NETWORKING_25 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 4333 (MSQL)
+LW_AWS_NETWORKING_26 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 5500 (VNC Listener)
+LW_AWS_NETWORKING_27 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 5900 (VNC Server)
+LW_AWS_NETWORKING_28 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to UDP port 137 (NetBIOS)
+LW_AWS_NETWORKING_29 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to UDP port 138 (NetBIOS)
+LW_AWS_NETWORKING_30 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to UDP port 445 (CIFS)
+LW_AWS_NETWORKING_31 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 21 (FTP)
+LW_AWS_NETWORKING_32 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 20 (FTP-Data)
+LW_AWS_NETWORKING_33 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 25 (SMTP)
+LW_AWS_NETWORKING_34 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to TCP port 53 (DNS)
+LW_AWS_NETWORKING_35 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to UDP port 53 (DNS)
+LW_AWS_NETWORKING_36 | Accounts, Regions, Group Id/Name, Tags | Security group attached to EC2 instance should not allow inbound traffic from all to All Ports
+LW_AWS_NETWORKING_37 | Accounts, Regions, Redshift Cluster, Tags | Redshift Cluster should not be Publicly Accessible
+LW_AWS_NETWORKING_38 | Accounts, Regions, ELB Id/Name, Tags | ELB Security Group should have Outbound Rules attached to it
+LW_AWS_NETWORKING_39 | Accounts, Regions, ELB Id/Name, Tags | ELB should not use insecure Cipher(s)
+LW_AWS_NETWORKING_40 | Accounts, Regions, Group Id/Name, Tags | EC2 instance should be deployed in EC2-VPC platform
+LW_AWS_NETWORKING_41 | Accounts, CloudFront Distribution ARN, Tags | CloudFront Origin Protocol Policy should use https-only
+LW_AWS_NETWORKING_42 | Accounts, CloudFront Distribution ARN, Tags | CloudFront Origin SSL Protocols should not use insecure Cipher(s)
+LW_AWS_NETWORKING_43 | Accounts, Regions, Group Id/Name, Tags | Security group should not allow inbound traffic from all to all ICMP
+LW_AWS_NETWORKING_44 | Accounts, Regions, ELB Id/Name, Tags | ELB should have VPC ingress security group
+LW_AWS_NETWORKING_45 | Accounts, Regions, ELB Id/Name, Tags | Classic LBs should have a valid and secure security group
+LW_AWS_NETWORKING_46 | Accounts, Regions, VPC Id, Tags | No Default VPC should be present in an AWS account
+LW_AWS_NETWORKING_47 | Accounts, Regions, EC2 instance, Tags | EC2 instances should not have a Public IP address attached
+LW_AWS_NETWORKING_48 | Accounts, Regions, VPC Id, Tags | Attached VPC CIDR block(s) should be in whitelist
+LW_AWS_NETWORKING_49 | Accounts, Regions, LB ARN/Name, Tags | Load Balancers should have Access Logs enabled
+LW_AWS_NETWORKING_50 | Accounts, CloudFront Distribution ARN, Tags | CloudFront View Protocol Policy should use https-only
+LW_AWS_NETWORKING_51 | Accounts, Regions, ELB Id/Name, Tags | ELBs should have a valid and secure security group
+
+### Lacework Custom Policies for AWS Serverless
+
+Control Number | Available Criteria | Description
+---|---|---
+LW_AWS_SERVERLESS_1 | Accounts, Regions, Lambda Function, Tags | Lambda Function should not have Admin Privileges
+LW_AWS_SERVERLESS_2 | Accounts, Regions, Lambda Function, Tags | Lambda Function should not have Cross Account Access
+LW_AWS_SERVERLESS_3 | Accounts, Regions, Lambda Function, Tags | Lambda Function should not have Same IAM Role for more than one lambda function
+LW_AWS_SERVERLESS_4 | Accounts, Regions, Lambda Function, Tags | Lambda Function should have tracing enabled
+LW_AWS_SERVERLESS_5 | Accounts, Regions, Lambda Function, Tags | Lambda Function should not have VPC access
