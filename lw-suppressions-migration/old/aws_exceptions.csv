@@ -1,0 +1,58 @@
+| 1.1 | [lacework-global-31](/catalog/policies/lacework-global-31) | _Manual Policy_ |
+| 1.2 | [lacework-global-32](/catalog/policies/lacework-global-32) | _Manual Policy_ |
+| 1.3 | [lacework-global-33](/catalog/policies/lacework-global-33) | _Manual Policy_ |
+| 1.4 | [lacework-global-34](/catalog/policies/lacework-global-34) | Account Ids |
+| 1.5 | [lacework-global-35](/catalog/policies/lacework-global-35) | Account Ids |
+| 1.6 | [lacework-global-69](/catalog/policies/lacework-global-69) | Account Ids |
+| 1.7 | [lacework-global-36](/catalog/policies/lacework-global-36) | Account Ids, User Name, Resource Tags |
+| 1.8 | [lacework-global-37](/catalog/policies/lacework-global-37) | Account Ids |
+| 1.9 | [lacework-global-38](/catalog/policies/lacework-global-38) | Account Ids |
+| 1.10 | [lacework-global-39](/catalog/policies/lacework-global-39) | Account Ids, User Name, Resource Tags |
+| 1.11 | [lacework-global-40](/catalog/policies/lacework-global-40) | Account Ids, User Name, Resource Tags |
+| 1.12 | [lacework-global-41](/catalog/policies/lacework-global-41) | Account Ids, User Name, Resource Tags |
+| 1.13 | [lacework-global-42](/catalog/policies/lacework-global-42) | Account Ids, User Name, Resource Tags |
+| 1.14 | [lacework-global-43](/catalog/policies/lacework-global-43) | Account Ids, User Name, Resource Tags |
+| 1.15 | [lacework-global-44](/catalog/policies/lacework-global-44) | Account Ids, User Name, Resource Tags |
+| 1.16 | [lacework-global-45](/catalog/policies/lacework-global-45) | Account Ids, Policy Name, Resource Tags |
+| 1.17 | [lacework-global-46](/catalog/policies/lacework-global-46) | Account Ids |
+| 1.18 | [lacework-global-70](/catalog/policies/lacework-global-70) | _Manual Policy_ |
+| 1.19 | [lacework-global-47](/catalog/policies/lacework-global-47) | Account Ids |
+| 1.20 | [lacework-global-48](/catalog/policies/lacework-global-48) | Account Ids |
+| 1.21 | [lacework-global-71](/catalog/policies/lacework-global-71) | _Manual Policy_ |
+| 2.1.1 | [lacework-global-72](/catalog/policies/lacework-global-72) | Account Ids, Bucket Name, Resource Tags |
+| 2.1.2 | [lacework-global-73](/catalog/policies/lacework-global-73) | Account Ids, Bucket Name, Resource Tags |
+| 2.1.3 | [lacework-global-49](/catalog/policies/lacework-global-49) | Account Ids, Bucket Name, Resource Tags |
+| 2.1.4 | [lacework-global-74](/catalog/policies/lacework-global-74) | _Manual Policy_ |
+| 2.1.5 | [lacework-global-50](/catalog/policies/lacework-global-50) | Account Ids, Bucket Name, Resource Tags |
+| 2.2.1 | [lacework-global-51](/catalog/policies/lacework-global-51) | Account Ids, Region Names, Volume Id, Resource Tags |
+| 2.3.1 | [lacework-global-52](/catalog/policies/lacework-global-52) | Account Ids, RDS Database, Resource Tags |
+| 3.1 | [lacework-global-53](/catalog/policies/lacework-global-53) | Account Ids |
+| 3.2 | [lacework-global-75](/catalog/policies/lacework-global-75) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.3 | [lacework-global-54](/catalog/policies/lacework-global-54) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.4 | [lacework-global-55](/catalog/policies/lacework-global-55) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.5 | [lacework-global-76](/catalog/policies/lacework-global-76) | Account Ids |
+| 3.6 | [lacework-global-56](/catalog/policies/lacework-global-56) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.7 | [lacework-global-77](/catalog/policies/lacework-global-77) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.8 | [lacework-global-78](/catalog/policies/lacework-global-78) | Account Ids, Region Names, Key Id/Alias, Resource Tags |
+| 3.9 | [lacework-global-79](/catalog/policies/lacework-global-79) | Account Ids, Region Names, VPC Id, Resource Tags |
+| 3.10 | [lacework-global-80](/catalog/policies/lacework-global-80) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 3.11 | [lacework-global-81](/catalog/policies/lacework-global-81) | Account Ids, Region Names, Trail Name, Resource Tags |
+| 4.1 | [lacework-global-57](/catalog/policies/lacework-global-57) | Account Ids |
+| 4.2 | [lacework-global-58](/catalog/policies/lacework-global-58) | Account Ids |
+| 4.3 | [lacework-global-59](/catalog/policies/lacework-global-59) | Account Ids |
+| 4.4 | [lacework-global-60](/catalog/policies/lacework-global-60) | Account Ids |
+| 4.5 | [lacework-global-61](/catalog/policies/lacework-global-61) | Account Ids |
+| 4.6 | [lacework-global-82](/catalog/policies/lacework-global-82) | Account Ids |
+| 4.7 | [lacework-global-83](/catalog/policies/lacework-global-83) | Account Ids |
+| 4.8 | [lacework-global-62](/catalog/policies/lacework-global-62) | Account Ids |
+| 4.9 | [lacework-global-84](/catalog/policies/lacework-global-84) | Account Ids |
+| 4.10 | [lacework-global-85](/catalog/policies/lacework-global-85) | Account Ids |
+| 4.11 | [lacework-global-86](/catalog/policies/lacework-global-86) | Account Ids |
+| 4.12 | [lacework-global-63](/catalog/policies/lacework-global-63) | Account Ids |
+| 4.13 | [lacework-global-64](/catalog/policies/lacework-global-64) | Account Ids |
+| 4.14 | [lacework-global-65](/catalog/policies/lacework-global-65) | Account Ids |
+| 4.15 | [lacework-global-66](/catalog/policies/lacework-global-66) | Account Ids |
+| 5.1 | [lacework-global-67](/catalog/policies/lacework-global-67) | Account Ids, Region Names, Network ACL ARN |
+| 5.2 | [lacework-global-68](/catalog/policies/lacework-global-68) | Account Ids, Region Names, Group Id/Name, Resource Tags |
+| 5.3 | [lacework-global-87](/catalog/policies/lacework-global-87) | Account Ids, Region Names, Group Id/Name, Resource Tags |
+| 5.4 | [lacework-global-88](/catalog/policies/lacework-global-88) | _Manual Policy_ |

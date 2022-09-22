@@ -1,0 +1,712 @@
+{
+    'data': [{
+        'recommendationExceptions': {
+            'LW_AWS_NETWORKING_15': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_14': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_17': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_16': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_19': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_18': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_11': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_18': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_10': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_19': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_13': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_16': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_12': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_17': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_22': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_14': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_23': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_15': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_20': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_12': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['716829324861'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': ['arn:aws:s3:::lwintaaronk-laceworkcws-b597'],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'AWS_CIS_1_21': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_13': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['716829324861'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': ['*'],
+                    'resourceTags': [{
+                        'key': 'env',
+                        'value': 'prod'
+                    }],
+                    'comments': ''
+                }]
+            },
+            'LW_S3_10': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_11': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_24': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_1': {
+                'enabled': False,
+                'suppressionConditions': None
+            },
+            'LW_S3_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_9': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_5': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['af-south-1', 'ap-east-1', 'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3'],
+                    'resourceNames': ['*'],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'AWS_CIS_2_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_1': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': [],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'LW_AWS_NETWORKING_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_2_9': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': ['vpc-09c14e60'],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'LW_S3_21': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_S3_20': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_RDS_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_37': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_SERVERLESS_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_36': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_39': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_38': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_31': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_30': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_33': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_SERVERLESS_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_32': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_SERVERLESS_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_35': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_SERVERLESS_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_34': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_SERVERLESS_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_26': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_25': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_28': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_27': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_29': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_1': {
+                'enabled': False,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_20': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_22': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_21': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_9': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_24': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_23': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_13': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': ['arn:aws:iam::390486092053:user/akorn_terraform'],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'LW_AWS_IAM_14': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_11': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_12': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_51': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_50': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_10': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_9': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_48': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_4_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_47': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_4_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_49': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_4_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_4_1': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['ap-southeast-1'],
+                    'resourceNames': ['*'],
+                    'resourceTags': [],
+                    'comments': ''
+                }, {
+                    'accountIds': ['ALL_ACCOUNTS'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': [],
+                    'resourceTags': [{
+                        'key': 'suppress',
+                        'value': 'true'
+                    }],
+                    'comments': ''
+                }]
+            },
+            'LW_AWS_NETWORKING_40': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_42': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_41': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_44': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_43': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_46': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_45': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_14': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_13': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_12': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_11': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_3_15': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_9': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_NETWORKING_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_ELASTICSEARCH_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_ELASTICSEARCH_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_ELASTICSEARCH_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_ELASTICSEARCH_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_9': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_8': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_7': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_6': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_5': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_4': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_3': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_11': {
+                'enabled': True,
+                'suppressionConditions': [{
+                    'accountIds': ['716829324861'],
+                    'regionNames': ['ALL_REGIONS'],
+                    'resourceNames': [],
+                    'resourceTags': [],
+                    'comments': ''
+                }]
+            },
+            'AWS_CIS_1_12': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_10': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_15': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_16': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_13': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_14': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_19': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_IAM_10': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'AWS_CIS_1_17': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_GENERAL_SECURITY_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_2': {
+                'enabled': True,
+                'suppressionConditions': None
+            },
+            'LW_AWS_MONGODB_1': {
+                'enabled': True,
+                'suppressionConditions': None
+            }
+        }
+    }],
+    'ok': True,
+    'message': 'SUCCESS'
+}
