@@ -19,22 +19,6 @@ if args.verbose:
 #                     'comments': ''
 #                 }]
 
-class PolicyExceptionConstraint:
-    def __init__(self, fieldKey, fieldValues):
-        self.fieldKey = fieldKey
-        self.fieldValues = fieldValues
-
-class PolicyException:
-    allowedConstraints = ["accountIds", "regionNames", "resourceNames", "resourceTags"]
-    def __init__(self, policyID, description, comments):
-        self.policyID = policyID 
-        self.comments = description
-        self.constraints = []
-        self.comments = comments
-    def addConstraint (self, constraint):
-        if (constraint.fieldKey in self.allowedConstraints):
-            self.constraints.add(constraint)
-
 class LPP:
     def __init__ (self, lwPolicyNumber, listOfConstraintTypes):
         self.lwpolicyID="lacework-global-"+lwPolicyNumber
