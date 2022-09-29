@@ -9,7 +9,7 @@ This tool is provided AS-IS and without any warranty nor expectations of support
 ## Requirements
 - Python 3.x
 - [Lacework CLI](https://docs.lacework.com/cli/) Installed and configured to a valid Lacework Tenant with existing AWS Policy suppressions
-- Lacework Python SDK: `pip install laceworksdk`
+- [Lacework Python SDK](https://github.com/lacework/python-sdk): `pip3 install laceworksdk`
 
 ### Working with multiple lacework CLI profiles
 Before (and after) running this tool, ensure your active (default) Lacework profile is the one you want to use for this migration. The source and destination of the migration has to be the same account, do not use it by reading Suppressions from account A and then execute the script output on Account B
