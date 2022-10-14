@@ -11,10 +11,6 @@ SQL_SERVERS=0
 LOAD_BALANCERS=0
 GATEWAYS=0
 
-function getSubscriptions {
-  az account list | jq -r '.[] | .id'
-}
-
 function setSubscription {
   SUB=$1
   az account set --subscription $SUB
@@ -46,7 +42,7 @@ function getGateways {
 }
 
 function getSubscriptions {
-  az account list | jq -r '.[] | .id'
+  az account list --query "[?name != 'Access to Azure Active Directory']" | jq -r '.[] | .id'
 }
 
 originalsub=$(az account show | jq -r '.id')
