@@ -15,19 +15,30 @@ GATEWAYS=0
 # scans all the projects in your organization. You must use the Project ID.
 #PROJECT_IDS=(stitch-dev-289221 stitch-vault stitch-jenkins-288315 stitch-infra)
 
+# Uncomment and replace with folder IDs containing projects you do not need to monitor with Laceworks.
+# This may include GSuite, AppsScript, and other GCP hosted fully managed projects.
+# Please see https://developers.google.com/apps-script/guides/cloud-platform-projects for more information.
+# If PROJECT_IDS is defined, this value will be ignored and only those projects will be inventoried.
+# SKIP_FOLDER_IDS=(1234567890 0987654321)
+
 function getProjects {
-  gcloud projects list --format json | jq -r ".[] | .projectId"
+  if [[ -z "${SKIP_FOLDER_IDS:x}" ]]; then
+    gcloud projects list --format=json | jq -r ".[] | .projectId"
+  else
+    FOLDER_FILTER=("${SKIP_FOLDER_IDS[@]}")
+    gcloud projects list --filter="-parent.id=(${FOLDER_FILTER[*]})" --format=json | jq -r ".[] | .projectId"
+  fi
 }
 
 function isComputeEnabled {
   gcloud services list --format json | jq -r '.[] | .name' | grep -q "compute.googleapis.com"
 }
 
-# NOTE - it is technically possible to have a CloudSQL instance without the 
-# sqladmin API enabled; but you cannot check the instance programatically 
+# NOTE - it is technically possible to have a CloudSQL instance without the
+# sqladmin API enabled; but you cannot check the instance programatically
 # without the API enabled
 function isCloudSQLEnabled {
-  gcloud services list --format json | jq -r '.[] | .name' | grep -q "sqladmin.googleapis.com" 
+  gcloud services list --format json | jq -r '.[] | .name' | grep -q "sqladmin.googleapis.com"
 }
 
 function getGKEInstances {
@@ -53,40 +64,40 @@ function getGateways {
 # Define PROJECT_IDS above to scan a subset of projects. Otherwise we scan
 # all of the projects in the organization.
 if [[ -z $PROJECT_IDS ]]; then
-  PROJECT_IDS=$(getProjects)
+        mapfile -t PROJECT_IDS < <(getProjects)
 fi
 
 # Loop through all the projects and take inventory
-for project in ${PROJECT_IDS[@]}; do
+for project in "${PROJECT_IDS[@]}"; do
   echo ""
   echo "######################################################################"
   echo "Project: $project"
-  gcloud config set project $project
+  gcloud config set project "$project"
 
   if isComputeEnabled; then
     echo "Checking for compute resources."
     # Update the GCE instances
     gce_inst=$(getGCEInstances)
-    GCE_INSTANCES=$(($GCE_INSTANCES + $gce_inst))
+    GCE_INSTANCES=$((GCE_INSTANCES + gce_inst))
 
     # Update the GKE instances
     gke_inst=$(getGKEInstances)
-    GKE_INSTANCES=$(($GKE_INSTANCES + $gke_inst))
+    GKE_INSTANCES=$((GKE_INSTANCES + gke_inst))
 
     # Update the load balancers
     lbs=$(getLoadBalancers)
-    LOAD_BALANCERS=$(($LOAD_BALANCERS + $lbs))
+    LOAD_BALANCERS=$((LOAD_BALANCERS + lbs))
 
     # Update the gateways
     gateways=$(getGateways)
-    GATEWAYS=$(($GATEWAYS + $gateways))
+    GATEWAYS=$((GATEWAYS + gateways))
   fi
 
   # Check for SQL instances
   if isCloudSQLEnabled; then
     echo "Checking for Cloud SQL instances."
     sqls=$(getSQLInstances)
-    SQL_INSTANCES=$(($SQL_INSTANCES + $sqls))
+    SQL_INSTANCES=$((SQL_INSTANCES + sqls))
   fi
 done
 
@@ -99,4 +110,4 @@ echo "Load Balancers:  $LOAD_BALANCERS"
 echo "Gateways:        $GATEWAYS"
 echo "SQL Instances:   $SQL_INSTANCES"
 echo "===================="
-echo "Total Resources: $(($GCE_INSTANCES + $GKE_INSTANCES + $LOAD_BALANCERS + $GATEWAYS + $SQL_INSTANCES))"
+echo "Total Resources: $((GCE_INSTANCES + GKE_INSTANCES + LOAD_BALANCERS + GATEWAYS + SQL_INSTANCES))"
