@@ -34,7 +34,10 @@ then
   while read i; do
     # lookup the vCPU in the map, extract the value
     vCPU=$(grep $i ./tmp_map | cut -d: -f2)
-    AZURE_VMS_VCPU=$(($AZURE_VMS_VCPU + $vCPU))
+    if [[ ! -z $vCPU ]]
+    then
+      AZURE_VMS_VCPU=$(($AZURE_VMS_VCPU + $vCPU))
+    fi
   done <<< "$VM_LINES"
 fi
 echo "Azure VMs vCPU:         $AZURE_VMS_VCPU"
@@ -55,11 +58,13 @@ then
     sku=$(echo $i | cut -d: -f1)
     capacity=$(echo $i | cut -d: -f2)
 
-    grep $sku ./tmp_map
     vCPU=$(grep $sku ./tmp_map | cut -d: -f2)
-    total_vCPU=$(($vCPU * $capacity))
+    if [[ ! -z $vCPU ]]
+    then
+      total_vCPU=$(($vCPU * $capacity))
 
-    AZURE_VMSS_VCPU=$(($AZURE_VMSS_VCPU + $total_vCPU))
+      AZURE_VMSS_VCPU=$(($AZURE_VMSS_VCPU + $total_vCPU))
+    fi
   done <<< "$VMSS_LINES"
 fi
 echo "Azure VMSS vCPU:        $AZURE_VMSS_VCPU"
