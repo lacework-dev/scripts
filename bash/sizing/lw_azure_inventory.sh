@@ -12,11 +12,9 @@ AZURE_VMS_VCPU=0
 AZURE_VMSS_VCPU=0
 
 echo "Building Azure VM SKU to vCPU map..."
-# az vm list-skus |\
-#   jq -r '.[] | .name as $parent | select(.capabilities != null) | .capabilities[] | select(.name == "vCPUs") | $parent+":"+.value' |\
-#   sort | uniq > ./tmp_map 
-
-# echo $VM_SKU_vCPU_MAP_LINES > ./tmp_map
+az vm list-skus |\
+  jq -r '.[] | .name as $parent | select(.capabilities != null) | .capabilities[] | select(.name == "vCPUs") | $parent+":"+.value' |\
+  sort | uniq > ./tmp_map 
 echo "Map built successfully."
 ###################################
 
@@ -73,4 +71,4 @@ echo ""
 
 
 echo "Total Azure vCPU:       $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
-# rm ./tmp_map
+rm ./tmp_map
