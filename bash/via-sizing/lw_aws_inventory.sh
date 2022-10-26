@@ -32,16 +32,9 @@ shift $((OPTIND -1))
 
 # Set the initial counts to zero.
 ACCOUNTS=0
-EC2_INSTANCES=0
-RDS_INSTANCES=0
-REDSHIFT_CLUSTERS=0
-ELB_V1=0
-ELB_V2=0
-NAT_GATEWAYS=0
-ECS_FARGATE_CLUSTERS=0
-ECS_FARGATE_RUNNING_TASKS=0
-LAMBDA_FNS=0
-LAMBDA_FNS_EXIST="No"
+EC2_INSTANCE_VCPU=0
+FARGATE_VCPU=0
+LAMBDA_MEMORY=0
 
 function getAccountId {
   aws --profile $profile sts get-caller-identity --query "Account" --output text
@@ -55,25 +48,6 @@ function getInstances {
   aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
-function getRDSInstances {
-  aws --profile $profile rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
-}
-
-function getRedshift {
-  aws --profile $profile redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
-}
-
-function getElbv1 {
-  aws --profile $profile elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
-}
-
-function getElbv2 {
-  aws --profile $profile elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
-}
-
-function getNatGateways {
-  aws --profile $profile ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
-}
 
 function getECSFargateClusters {
   aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
@@ -102,11 +76,6 @@ function calculateInventory {
   accountid=$(getAccountId $profile)
 
   accountEC2Instances=0
-  accountRDSInstances=0
-  accountRedshiftClusters=0
-  accountELBV1=0
-  accountELBV2=0
-  accountNATGateways=0
   accountECSFargateClusters=0
   accountECSFargateRunningTasks=0
   accountLambdaFunctions=0
@@ -118,26 +87,6 @@ function calculateInventory {
     instances=$(getInstances $r $profile)
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
     accountEC2Instances=$(($accountEC2Instances + $instances))
-
-    rds=$(getRDSInstances $r $profile)
-    RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
-    accountRDSInstances=$(($accountRDSInstances + $rds))
-
-    redshift=$(getRedshift $r $profile)
-    REDSHIFT_CLUSTERS=$(($REDSHIFT_CLUSTERS + $redshift))
-    accountRedshiftClusters=$(($accountRedshiftClusters + $redshift))
-
-    elbv1=$(getElbv1 $r $profile)
-    ELB_V1=$(($ELB_V1 + $elbv1))
-    accountELBV1=$(($accountELBV1 + $elbv1))
-
-    elbv2=$(getElbv2 $r $profile)
-    ELB_V2=$(($ELB_V2 + $elbv2))
-    accountELBV2=$(($accountELBV2 + $elbv2))
-
-    natgw=$(getNatGateways $r $profile)
-    NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
-    accountNATGateways=$(($accountNATGateways + $natgw))
 
     ecsfargateclusters=$(getECSFargateClusters $r $profile)
     ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
@@ -188,7 +137,7 @@ function textoutput {
   echo "Lambda Functions Exist:         $LAMBDA_FNS_EXIST"
 }
 
-echo "Profile", "Account ID", "Regions", "EC2 Instances", "RDS Instances", "Redshift Clusters", "v1 Load Balancers", "v2 Load Balancers", "NAT Gateways", "Total Resources", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "Lambda Functions"
+#echo "Profile", "Account ID", "Regions", "EC2 Instances", "RDS Instances", "Redshift Clusters", "v1 Load Balancers", "v2 Load Balancers", "NAT Gateways", "Total Resources", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "Lambda Functions"
 
 for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
 do
