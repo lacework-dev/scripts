@@ -12,7 +12,7 @@ AZURE_VMS_VCPU=0
 AZURE_VMSS_VCPU=0
 
 echo "Building Azure VM SKU to vCPU map..."
-az vm list-skus |\
+az vm list-skus --resource-type virtualmachines |\
   jq -r '.[] | .name as $parent | select(.capabilities != null) | .capabilities[] | select(.name == "vCPUs") | $parent+":"+.value' |\
   sort | uniq > ./tmp_map 
 echo "Map built successfully."
