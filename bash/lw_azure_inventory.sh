@@ -45,10 +45,6 @@ function getGateways {
   az network vnet-gateway list --resource-group $RG | jq length
 }
 
-function getSubscriptions {
-  az account list | jq -r '.[] | .id'
-}
-
 originalsub=$(az account show | jq -r '.id')
 
 echo "Starting inventory check."
