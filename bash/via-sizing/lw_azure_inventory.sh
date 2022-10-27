@@ -1,24 +1,45 @@
 #!/bin/bash
 
+# Script to fetch Azure inventory for Lacework sizing.
+# Requirements: az cli, jq, cut, grep
+
+# This script can be run from Azure Cloud Shell.
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
-# Script to fetch Azure inventory for Lacework sizing.
-# Requirements: az cli, jq, cut, grep
+while getopts ":m:s:" opt; do
+  case ${opt} in
+    s )
+      SUBSCRIPTION=$OPTARG
+      ;;
+    m )
+      MANAGEMENT_GROUP=$OPTARG
+      ;;
+    \? )
+      echo "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      exit 1
+      ;;
+    : )
+      echo "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
 function removeMap {
   if [[ -f "./tmp_map" ]]; then
     rm ./tmp_map
   fi
 }
 
+# set trap to remove tmp_map file regardless of exit status
 trap removeMap EXIT
-# This script can be run from Azure Cloud Shell.
+
 
 # Set the initial counts to zero.
-
-#TODO: future state, support a flag to filter on subscription or management group scope
-
 AZURE_VMS_VCPU=0
 AZURE_VMSS_VCPU=0
 
@@ -33,8 +54,20 @@ echo "Map built successfully."
 
 # get VM details
 echo "Running Az Resource Graph Query for VMs..."
-vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize")
+# Management group takes precedence...partial scopes ALLOWED
+if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
+  # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
+  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
+        --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
+elif [[ ! -z "$SUBSCRIPTION" ]]
+  # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
+  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
+        --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
+else
+  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize")
+fi
 echo "VM data retrieved."
+
 
 # tally up VM vCPU 
 VM_LINES=$(echo $vms | jq -r '.data[] | .sku')
@@ -54,9 +87,21 @@ echo ""
 ###################################
 
 
+#TODO: future state, support a flag to filter on subscription or management group scope
 # get VMSS details
 echo "Running Az Resource Graph Query for VMSS..."
-vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)")
+# Management group takes precedence...partial scopes ALLOWED
+if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
+  # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
+  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
+        --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
+elif [[ ! -z "$SUBSCRIPTION" ]]
+  # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
+  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
+        --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
+else
+  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)")
+fi
 echo "VMSS data retrieved."
 
 # tally up VMSS vCPU -- using a here string to populate the while loop

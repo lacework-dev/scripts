@@ -13,7 +13,7 @@ AWS_PROFILE=default
 export AWS_MAX_ATTEMPTS=20
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp::t" opt; do
+while getopts ":p:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG

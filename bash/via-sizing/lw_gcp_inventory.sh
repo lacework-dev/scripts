@@ -9,6 +9,30 @@ set -o pipefail
 
 # This script can be run from Google Cloud Shell.
 
+while getopts ":f:o:p:" opt; do
+  case ${opt} in
+    f )
+      FOLDER=$OPTARG
+      ;;
+    o )
+      ORGANIZATION=$OPTARG
+      ;;
+    p )
+      PROJECT=$OPTARG
+      ;;
+    \? )
+      echo "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      exit 1
+      ;;
+    : )
+      echo "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
+
 # Set the initial counts to zero.
 GCE_VCPU=0
 #GKE_VCPU=0
