@@ -1,4 +1,9 @@
 #!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
 # Script to fetch GCP inventory for Lacework sizing.
 # Requirements: gcloud, jq
 

@@ -1,7 +1,18 @@
 #!/bin/bash
-# Script to fetch Azure inventory for Lacework sizing.
-# Requirements: az cli, jq, cut, grep, zsh or bash 4+
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# Script to fetch Azure inventory for Lacework sizing.
+# Requirements: az cli, jq, cut, grep
+function removeMap {
+  if [[ -f "./tmp_map" ]]; then
+    rm ./tmp_map
+  fi
+}
+
+trap removeMap EXIT
 # This script can be run from Azure Cloud Shell.
 
 # Set the initial counts to zero.
@@ -71,4 +82,3 @@ echo ""
 
 
 echo "Total Azure vCPU:       $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
-rm ./tmp_map
