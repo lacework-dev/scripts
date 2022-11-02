@@ -1,4 +1,7 @@
 # Usage
+## Compiling
+```go build ```
+
 # AWS
 
 Log into the aws CLI before running the inventory app
