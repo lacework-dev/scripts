@@ -76,12 +76,12 @@ func Run(profiles []string, regions []string, debug bool) {
 	fmt.Printf("Profiles to use: %s\n", profiles)
 
 	//loop over all profiles and get counts
-	var agentlessCounts []AgentlessServiceCount
-	var ec2VMInfo []AgentVMInfo
-	var enterpriseAgentVMInfo []AgentVMInfo
-	var agentContainers []AgentContainerCount
 
 	for _, p := range profiles {
+		var agentlessCounts []AgentlessServiceCount
+		var ec2VMInfo []AgentVMInfo
+		var enterpriseAgentVMInfo []AgentVMInfo
+		var agentContainers []AgentContainerCount
 		fmt.Println("Using profile", p)
 
 		cfg := getSession(p, "us-east-1")
@@ -96,87 +96,88 @@ func Run(profiles []string, regions []string, debug bool) {
 		enterpriseAgentVMInfo = getEnterpriseAgentVMCounts(p, regions)
 		agentContainers = getAgentContainerCounts(p, regions)
 
-	}
+		//run through each region
+		agentlessResourceCount := 0
+		agentContainerCount := make(map[string]int)
+		standardAgents := []string{}
+		enterpriseAgents := []string{}
+		agentlessServices := []string{EC2, RDS, REDSHIFT, ELBv1, ELBv2, NATGATEWAY, ECS}
+		agentServices := []string{ECS_TASKS, FARGATE_RUNNING_TASKS, FARGATE_RUNNING_CONTAINERS, FARGATE_TOTAL_CONTAINERS, FARGATE_ACTIVE_SERVICES, EKS_FARGATE_ACTIVE_PROFILES}
+		var enterpriseAgentOSCounts OSCounts
+		var standardAgentOSCounts OSCounts
+		for _, r := range regions {
+			agentlessCountByRegion := 0
 
-	//run through each region
-	agentlessResourceCount := 0
-	agentContainerCount := make(map[string]int)
-	standardAgents := []string{}
-	enterpriseAgents := []string{}
-	agentlessServices := []string{EC2, RDS, REDSHIFT, ELBv1, ELBv2, NATGATEWAY, ECS}
-	agentServices := []string{ECS_TASKS, FARGATE_RUNNING_TASKS, FARGATE_RUNNING_CONTAINERS, FARGATE_TOTAL_CONTAINERS, FARGATE_ACTIVE_SERVICES, EKS_FARGATE_ACTIVE_PROFILES}
-	var enterpriseAgentOSCounts OSCounts
-	var standardAgentOSCounts OSCounts
-	for _, r := range regions {
-		agentlessCountByRegion := 0
-
-		log.Debugln("Region ", r)
-		for _, s := range agentlessServices {
-			agentlessCountByRegion += getAgentlessCountByService(agentlessCounts, r, s)
-		}
-
-		agentlessResourceCount += agentlessCountByRegion
-
-		for _, s := range agentServices {
-			agentContainerCount[s] += getAgentCountByService(agentContainers, r, s)
-		}
-	}
-
-	//get a list of AMIs to compare against
-	var amis []string
-	for _, vm := range ec2VMInfo {
-		amis = append(amis, vm.AMI)
-	}
-
-	for _, vm := range enterpriseAgentVMInfo {
-		if vm.AgentType == ENTERPRISE_AGENT {
-			enterpriseAgents = append(enterpriseAgents, vm.AMI)
-		}
-
-		//sometimes instances for EKS/ECS don't show up in EC2 list...might be offline or managed instances in ECS
-		if !helpers.Contains(amis, vm.AMI) {
-			log.Printf("Instance not in EC2 instance list %s %s", vm.AMI, vm.Region)
-		}
-	}
-
-	var accountIds []string
-	for _, vm := range ec2VMInfo {
-		if !helpers.Contains(accountIds, vm.AccountId) {
-			accountIds = append(accountIds, vm.AccountId)
-		}
-	}
-	for _, vm := range ec2VMInfo {
-		if !helpers.Contains(enterpriseAgents, vm.AMI) {
-			standardAgents = append(standardAgents, vm.AMI)
-			if vm.OS == "Linux/UNIX" {
-				standardAgentOSCounts.Linux++
-			} else {
-				standardAgentOSCounts.Windows++
+			log.Debugln("Region ", r)
+			for _, s := range agentlessServices {
+				agentlessCountByRegion += getAgentlessCountByService(agentlessCounts, r, s)
 			}
-		} else {
-			if vm.OS == "Linux/UNIX" {
-				enterpriseAgentOSCounts.Linux++
-			} else {
-				enterpriseAgentOSCounts.Windows++
+
+			agentlessResourceCount += agentlessCountByRegion
+
+			for _, s := range agentServices {
+				agentContainerCount[s] += getAgentCountByService(agentContainers, r, s)
 			}
 		}
-	}
-	fmt.Println("----------------------------------------------")
-	fmt.Printf("Total Resources %d\n", agentlessResourceCount)
-	fmt.Printf("Standard VM Agents: %d\n", len(standardAgents))
-	fmt.Printf("Enterprise VM Agents: %d\n", len(enterpriseAgents))
-	for s, c := range agentContainerCount {
-		fmt.Printf("%s: %d\n", s, c)
+
+		//get a list of AMIs to compare against
+		var amis []string
+		for _, vm := range ec2VMInfo {
+			amis = append(amis, vm.AMI)
+		}
+
+		for _, vm := range enterpriseAgentVMInfo {
+			if vm.AgentType == ENTERPRISE_AGENT {
+				enterpriseAgents = append(enterpriseAgents, vm.AMI)
+			}
+
+			//sometimes instances for EKS/ECS don't show up in EC2 list...might be offline or managed instances in ECS
+			if !helpers.Contains(amis, vm.AMI) {
+				log.Printf("Instance not in EC2 instance list %s %s", vm.AMI, vm.Region)
+			}
+		}
+
+		var accountIds []string
+		for _, vm := range ec2VMInfo {
+			if !helpers.Contains(accountIds, vm.AccountId) {
+				accountIds = append(accountIds, vm.AccountId)
+			}
+		}
+		for _, vm := range ec2VMInfo {
+			if !helpers.Contains(enterpriseAgents, vm.AMI) {
+				standardAgents = append(standardAgents, vm.AMI)
+				if vm.OS == "Linux/UNIX" {
+					standardAgentOSCounts.Linux++
+				} else {
+					standardAgentOSCounts.Windows++
+				}
+			} else {
+				if vm.OS == "Linux/UNIX" {
+					enterpriseAgentOSCounts.Linux++
+				} else {
+					enterpriseAgentOSCounts.Windows++
+				}
+			}
+		}
+		fmt.Println("----------------------------------------------")
+		fmt.Println("Totals for profile", p)
+		fmt.Printf("Total Resources  %d\n", agentlessResourceCount)
+		fmt.Printf("Standard VM Agents: %d\n", len(standardAgents))
+		fmt.Printf("Enterprise VM Agents: %d\n", len(enterpriseAgents))
+		for s, c := range agentContainerCount {
+			fmt.Printf("%s: %d\n", s, c)
+		}
+
+		fmt.Println("\nVM OS Counts")
+		fmt.Printf("Standard Linux VMs %d\n", standardAgentOSCounts.Linux)
+		fmt.Printf("Standard Windows VMs %d\n", standardAgentOSCounts.Windows)
+		fmt.Printf("Enterprise Linux VMs %d\n", enterpriseAgentOSCounts.Linux)
+		fmt.Printf("Enterprise Windows VMs %d\n", enterpriseAgentOSCounts.Windows)
+
+		fmt.Println("\nNumber of AWS Accounts inventoried:", len(accountIds))
+		fmt.Println("----------------------------------------------")
 	}
 
-	fmt.Println("\nVM OS Counts")
-	fmt.Printf("Standard Linux VMs %d\n", standardAgentOSCounts.Linux)
-	fmt.Printf("Standard Windows VMs %d\n", standardAgentOSCounts.Windows)
-	fmt.Printf("Enterprise Linux VMs %d\n", enterpriseAgentOSCounts.Linux)
-	fmt.Printf("Enterprise Windows VMs %d\n", enterpriseAgentOSCounts.Windows)
-
-	fmt.Println("\nNumber of AWS Accounts inventoried", len(accountIds))
-	fmt.Println("----------------------------------------------")
 }
 
 func getSession(profile string, region string) *aws.Config {
