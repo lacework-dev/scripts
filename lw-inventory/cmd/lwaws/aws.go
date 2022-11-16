@@ -75,8 +75,12 @@ func Run(profiles []string, regions []string, debug bool) {
 	fmt.Println("Beginning Scan")
 	fmt.Printf("Profiles to use: %s\n", profiles)
 
-	//loop over all profiles and get counts
+	totalResources := 0
+	var totalStandardOSCount OSCounts
+	var totalEnterpriseOSCount OSCounts
+	totalAccounts := 0
 
+	//loop over all profiles and get counts
 	for _, p := range profiles {
 		var agentlessCounts []AgentlessServiceCount
 		var ec2VMInfo []AgentVMInfo
@@ -101,7 +105,7 @@ func Run(profiles []string, regions []string, debug bool) {
 		agentContainerCount := make(map[string]int)
 		standardAgents := []string{}
 		enterpriseAgents := []string{}
-		agentlessServices := []string{EC2, RDS, REDSHIFT, ELBv1, ELBv2, NATGATEWAY, ECS}
+		agentlessServices := []string{RDS, REDSHIFT, ELBv1, ELBv2, NATGATEWAY, ECS}
 		agentServices := []string{ECS_TASKS, FARGATE_RUNNING_TASKS, FARGATE_RUNNING_CONTAINERS, FARGATE_TOTAL_CONTAINERS, FARGATE_ACTIVE_SERVICES, EKS_FARGATE_ACTIVE_PROFILES}
 		var enterpriseAgentOSCounts OSCounts
 		var standardAgentOSCounts OSCounts
@@ -144,6 +148,7 @@ func Run(profiles []string, regions []string, debug bool) {
 			}
 		}
 		for _, vm := range ec2VMInfo {
+			agentlessResourceCount++
 			if !helpers.Contains(enterpriseAgents, vm.AMI) {
 				standardAgents = append(standardAgents, vm.AMI)
 				if vm.OS == "Linux/UNIX" {
@@ -159,6 +164,14 @@ func Run(profiles []string, regions []string, debug bool) {
 				}
 			}
 		}
+
+		totalResources += agentlessResourceCount
+		totalStandardOSCount.Linux += standardAgentOSCounts.Linux
+		totalStandardOSCount.Windows += standardAgentOSCounts.Windows
+		totalEnterpriseOSCount.Linux += enterpriseAgentOSCounts.Linux
+		totalEnterpriseOSCount.Windows += enterpriseAgentOSCounts.Windows
+		totalAccounts += len(accountIds)
+
 		fmt.Println("----------------------------------------------")
 		fmt.Println("Totals for profile", p)
 		fmt.Printf("Total Resources  %d\n", agentlessResourceCount)
@@ -178,12 +191,28 @@ func Run(profiles []string, regions []string, debug bool) {
 		fmt.Println("----------------------------------------------")
 	}
 
+	fmt.Println("----------------------------------------------")
+	fmt.Println("Totals for all profiles")
+	fmt.Printf("Total Resources  %d\n", totalResources)
+	fmt.Printf("Standard VM Agents: %d\n", totalStandardOSCount.Linux+totalStandardOSCount.Windows)
+	fmt.Printf("Enterprise VM Agents: %d\n", totalEnterpriseOSCount.Linux+totalEnterpriseOSCount.Windows)
+
+	fmt.Println("\nVM OS Counts")
+	fmt.Printf("Standard Linux VMs %d\n", totalStandardOSCount.Linux)
+	fmt.Printf("Standard Windows VMs %d\n", totalStandardOSCount.Windows)
+	fmt.Printf("Enterprise Linux VMs %d\n", totalEnterpriseOSCount.Linux)
+	fmt.Printf("Enterprise Windows VMs %d\n", totalEnterpriseOSCount.Windows)
+
+	fmt.Println("\nNumber of AWS Accounts inventoried:", totalAccounts)
+	fmt.Println("----------------------------------------------")
+
 }
 
 func getSession(profile string, region string) *aws.Config {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(region),
 		config.WithSharedConfigProfile(profile),
+		//config.WithDefaultsMode(aws.DefaultsModeAuto),
 	)
 	if err != nil {
 		log.Errorln("Error connecting to AWS", err)
@@ -246,12 +275,6 @@ func getAgentlessCounts(profile string, regions []string) []AgentlessServiceCoun
 	var serviceCountList []AgentlessServiceCount
 	for _, r := range regions {
 		cfg := getSession(profile, r)
-		//ec2 instances
-		numFuncs += 1
-		go func(r string) {
-			channel <- getEC2InstanceCountByRegion(*cfg, r)
-		}(r)
-
 		//rds instances
 		numFuncs += 1
 		go func(r string) {
@@ -649,23 +672,26 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 						log.Errorln("getEKSVMCountByRegion DescribeNodegroup ", region, err)
 					} else {
 						var asgNames []string
-						for _, autoscalingGroup := range output.Nodegroup.Resources.AutoScalingGroups {
-							asgNames = append(asgNames, *autoscalingGroup.Name)
-						}
+						if output.Nodegroup.Resources != nil {
+							for _, autoscalingGroup := range output.Nodegroup.Resources.AutoScalingGroups {
+								asgNames = append(asgNames, *autoscalingGroup.Name)
+							}
 
-						outputDASG, err := autoscalingService.DescribeAutoScalingGroups(context.TODO(), &autoscaling.DescribeAutoScalingGroupsInput{
-							AutoScalingGroupNames: asgNames,
-						})
+							outputDASG, err := autoscalingService.DescribeAutoScalingGroups(context.TODO(), &autoscaling.DescribeAutoScalingGroupsInput{
+								AutoScalingGroupNames: asgNames,
+							})
 
-						if err != nil {
-							log.Errorln("getEKSVMCountByRegion DescribeAutoScalingGroups ", region, err)
-						} else {
-							for _, asg := range outputDASG.AutoScalingGroups {
-								for _, i := range asg.Instances {
-									instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: ENTERPRISE_AGENT})
+							if err != nil {
+								log.Errorln("getEKSVMCountByRegion DescribeAutoScalingGroups ", region, err)
+							} else {
+								for _, asg := range outputDASG.AutoScalingGroups {
+									for _, i := range asg.Instances {
+										instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: ENTERPRISE_AGENT})
+									}
 								}
 							}
 						}
+
 					}
 				}
 			}
@@ -725,7 +751,7 @@ func getEC2InstanceCountByRegion(cfg aws.Config, region string) AgentlessService
 func getEC2InstancesByRegion(cfg aws.Config, region string) []AgentVMInfo {
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstancesPaginator(service, &ec2.DescribeInstancesInput{
-		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending"}}},
+		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending", "stopped"}}},
 	})
 
 	instances := []AgentVMInfo{}
