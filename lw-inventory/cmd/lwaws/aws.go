@@ -689,8 +689,8 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 							} else {
 								log.Debugln("EKS DescribeAutoScalingGroups", cluster, outputDASG.AutoScalingGroups)
 								for _, asg := range outputDASG.AutoScalingGroups {
+									log.Debugln("EKS Autoscaling Instances", cluster, asg.Instances)
 									for _, i := range asg.Instances {
-										log.Debugln("EKS Autoscaling Instances", cluster, asg.Instances)
 										instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: ENTERPRISE_AGENT})
 									}
 								}
