@@ -656,6 +656,7 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 	if err != nil {
 		log.Errorln("getEKSVMCountByRegion ListClusters ", region, err)
 	} else {
+		log.Debugln("EKS clusters", output.Clusters)
 		for _, cluster := range output.Clusters {
 			output, err := service.ListNodegroups(context.TODO(), &eks.ListNodegroupsInput{
 				ClusterName: &cluster,
@@ -663,6 +664,7 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 			if err != nil {
 				log.Errorln("getEKSVMCountByRegion ListNodegroups ", region, err)
 			} else {
+				log.Debugln("EKS Node Groups", cluster, output.Nodegroups)
 				for _, nodegroup := range output.Nodegroups {
 					output, err := service.DescribeNodegroup(context.TODO(), &eks.DescribeNodegroupInput{
 						ClusterName:   &cluster,
@@ -673,6 +675,7 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 					} else {
 						var asgNames []string
 						if output.Nodegroup.Resources != nil {
+							log.Debugln("EKS Autoscaling Groups", cluster, output.Nodegroup.Resources.AutoScalingGroups)
 							for _, autoscalingGroup := range output.Nodegroup.Resources.AutoScalingGroups {
 								asgNames = append(asgNames, *autoscalingGroup.Name)
 							}
@@ -684,8 +687,10 @@ func getEKSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 							if err != nil {
 								log.Errorln("getEKSVMCountByRegion DescribeAutoScalingGroups ", region, err)
 							} else {
+								log.Debugln("EKS DescribeAutoScalingGroups", cluster, outputDASG.AutoScalingGroups)
 								for _, asg := range outputDASG.AutoScalingGroups {
 									for _, i := range asg.Instances {
+										log.Debugln("EKS Autoscaling Instances", cluster, asg.Instances)
 										instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: ENTERPRISE_AGENT})
 									}
 								}
@@ -726,6 +731,7 @@ func getECSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 					if err != nil {
 						log.Errorln("getECSVMCountByRegion DescribeContainerInstances ", region, err)
 					} else {
+						log.Debugln("ECS EC2 Instances", output.ContainerInstances)
 						for _, i := range output.ContainerInstances {
 							instances = append(instances, AgentVMInfo{Region: region, AMI: *i.Ec2InstanceId, AgentType: ENTERPRISE_AGENT})
 						}
