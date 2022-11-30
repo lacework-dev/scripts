@@ -130,6 +130,12 @@ func Run(profiles []string, regions []string, debug bool) {
 			amis = append(amis, vm.AMI)
 		}
 
+		for _, vm := range ec2VMInfo {
+			if vm.AgentType == ENTERPRISE_AGENT {
+				enterpriseAgents = append(enterpriseAgents, vm.AMI)
+			}
+		}
+
 		for _, vm := range enterpriseAgentVMInfo {
 			if vm.AgentType == ENTERPRISE_AGENT {
 				enterpriseAgents = append(enterpriseAgents, vm.AMI)
@@ -628,11 +634,11 @@ func getEnterpriseAgentVMCounts(profile string, regions []string) []AgentVMInfo 
 			channel <- getECSVMCountByRegion(*cfg, r)
 		}(r)
 
-		//EKS EC2s
-		numFuncs += 1
-		go func(r string) {
-			channel <- getEKSVMCountByRegion(*cfg, r)
-		}(r)
+		////EKS EC2s
+		//numFuncs += 1
+		//go func(r string) {
+		//	channel <- getEKSVMCountByRegion(*cfg, r)
+		//}(r)
 	}
 
 	for i := 0; i < numFuncs; i++ {
@@ -771,7 +777,13 @@ func getEC2InstancesByRegion(cfg aws.Config, region string) []AgentVMInfo {
 				for _, i := range res.Instances {
 					//log.Info("platform ", i.Platform)
 					//log.Info("platform details ", *i.PlatformDetails)
-					instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: STANDARD_AGENT, OS: *i.PlatformDetails, AccountId: *res.OwnerId})
+					agentType := STANDARD_AGENT
+					for _, t := range i.Tags {
+						if *t.Key == "eks:cluster-name" {
+							agentType = ENTERPRISE_AGENT
+						}
+					}
+					instances = append(instances, AgentVMInfo{Region: region, AMI: *i.InstanceId, AgentType: agentType, OS: *i.PlatformDetails, AccountId: *res.OwnerId})
 				}
 			}
 		}
