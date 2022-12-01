@@ -13,8 +13,9 @@ var awsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		regions := lwaws.ParseRegions(cmd)
 		profiles := lwaws.ParseProfiles(cmd)
+		tags := lwaws.ParseTags(cmd)
 		debug := helpers.ParseDebug(cmd)
-		lwaws.Run(profiles, regions, debug)
+		lwaws.Run(profiles, regions, debug, tags)
 	},
 }
 
@@ -23,4 +24,5 @@ func init() {
 	awsCmd.Flags().StringP("profile", "p", "", "AWS Profile(s) to inventory")
 	awsCmd.Flags().StringP("region", "r", "", "AWS Region(s) to inventory")
 	awsCmd.Flags().BoolP("debug", "d", false, "Show Debug Logs")
+	awsCmd.Flags().StringP("tags", "t", "", "Tags for K8s VMs")
 }
