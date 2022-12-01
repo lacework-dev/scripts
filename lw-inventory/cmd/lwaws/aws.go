@@ -737,7 +737,7 @@ func getECSVMCountByRegion(cfg aws.Config, region string) []AgentVMInfo {
 					if err != nil {
 						log.Errorln("getECSVMCountByRegion DescribeContainerInstances ", region, err)
 					} else {
-						log.Debugln("ECS EC2 Instances", output.ContainerInstances)
+						//log.Debugln("ECS EC2 Instances", output.ContainerInstances)
 						for _, i := range output.ContainerInstances {
 							instances = append(instances, AgentVMInfo{Region: region, AMI: *i.Ec2InstanceId, AgentType: ENTERPRISE_AGENT})
 						}
@@ -779,7 +779,9 @@ func getEC2InstancesByRegion(cfg aws.Config, region string) []AgentVMInfo {
 					//log.Info("platform details ", *i.PlatformDetails)
 					agentType := STANDARD_AGENT
 					for _, t := range i.Tags {
+						log.Debugf("Instance: %s, tag: %s", *i.InstanceId, *t.Key)
 						if *t.Key == "eks:cluster-name" {
+							log.Debugln("found EKS node")
 							agentType = ENTERPRISE_AGENT
 						}
 					}
