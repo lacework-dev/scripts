@@ -181,17 +181,17 @@ func Run(profiles []string, regions []string, debug bool) {
 		fmt.Println("----------------------------------------------")
 		fmt.Println("Totals for profile", p)
 		fmt.Printf("Total Resources  %d\n", agentlessResourceCount)
-		fmt.Printf("Standard VM Agents: %d\n", len(standardAgents))
-		fmt.Printf("Enterprise VM Agents: %d\n", len(enterpriseAgents))
+		fmt.Printf("EC2 VMs: %d\n", len(standardAgents))
+		fmt.Printf("EKS/ECS VMs: %d\n", len(enterpriseAgents))
 		for s, c := range agentContainerCount {
 			fmt.Printf("%s: %d\n", s, c)
 		}
 
 		fmt.Println("\nVM OS Counts")
-		fmt.Printf("Standard Linux VMs %d\n", standardAgentOSCounts.Linux)
-		fmt.Printf("Standard Windows VMs %d\n", standardAgentOSCounts.Windows)
-		fmt.Printf("Enterprise Linux VMs %d\n", enterpriseAgentOSCounts.Linux)
-		fmt.Printf("Enterprise Windows VMs %d\n", enterpriseAgentOSCounts.Windows)
+		fmt.Printf("Linux EC2 VMs %d\n", standardAgentOSCounts.Linux)
+		fmt.Printf("Windows EC2 VMs %d\n", standardAgentOSCounts.Windows)
+		fmt.Printf("Linux EKS/ECS VMs %d\n", enterpriseAgentOSCounts.Linux)
+		fmt.Printf("Windows EKS/ECS VMs %d\n", enterpriseAgentOSCounts.Windows)
 
 		fmt.Println("\nNumber of AWS Accounts inventoried:", len(accountIds))
 		fmt.Println("----------------------------------------------")
@@ -780,7 +780,7 @@ func getEC2InstancesByRegion(cfg aws.Config, region string) []AgentVMInfo {
 					agentType := STANDARD_AGENT
 					for _, t := range i.Tags {
 						log.Debugf("Instance: %s, tag: %s", *i.InstanceId, *t.Key)
-						if *t.Key == "eks:cluster-name" {
+						if *t.Key == "eks:cluster-name" || *t.Key == "aws:eks:cluster-name" {
 							log.Debugln("found EKS node")
 							agentType = ENTERPRISE_AGENT
 						}
