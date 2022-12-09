@@ -11,14 +11,9 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/api/serviceusage/v1"
-	"google.golang.org/api/sqladmin/v1"
 	computepb "google.golang.org/genproto/googleapis/cloud/compute/v1"
+	"strconv"
 	"strings"
-)
-
-const (
-	GCE_VM = "GCE VM"
-	GKE_VM = "GKE VM"
 )
 
 type ProjectInfo struct {
@@ -27,17 +22,25 @@ type ProjectInfo struct {
 	Number int64
 }
 
-type AgentlessServiceCount struct {
-	Region  string
-	Service string
-	Count   int
+type VMInstanceInfo struct {
+	Zone         string
+	Image        string
+	OS           string
+	InstanceType string
+	Project      string
+	vCPU         int32
+	Name         string
 }
 
-type VMInstanceInfo struct {
-	Zone   string
-	Image  string
-	VMType string
-	OS     string
+type InstanceType struct {
+	Zone string
+	Name string
+}
+
+type MachineType struct {
+	vCPUs int32
+	Name  string
+	Zone  string
 }
 
 type OSCounts struct {
@@ -51,165 +54,46 @@ func Run(projectsToIgnore []string, credentials string, debug bool) {
 	}
 
 	projects := getProjects(credentials, projectsToIgnore)
-	agentlessCount := getAgentlessCount(credentials, projects)
-
 	vms := getVMInstances(credentials, projects)
-	enterpriseVMs := getEntepriseAgents(vms)
-	standardVMs := getStandardAgents(vms)
+	machineTypes := getMachinesTypes(credentials, projects, vms)
 
-	fmt.Println("----------------------------------------------")
-	fmt.Printf("Total Resources %d\n", agentlessCount+len(vms))
-	fmt.Printf("Standard VM Agents: %d\n", len(standardVMs))
-	fmt.Printf("Enterprise VM Agents: %d\n", len(enterpriseVMs))
-	fmt.Println("Number of GCP projects inventoried", len(projects))
-	fmt.Println("----------------------------------------------")
-}
-
-func getAgentlessCount(credentials string, projects []ProjectInfo) int {
-	fmt.Println("Gathering resource count")
-	resourceCount := 0
-	numFuncs := 0
-	channel := make(chan int)
-
-	numFuncs += 1
-	go func(credentials string, projects []ProjectInfo) {
-		channel <- getLoadBalancers(credentials, projects)
-	}(credentials, projects)
-
-	numFuncs += 1
-	go func(credentials string, projects []ProjectInfo) {
-		channel <- getGateways(credentials, projects)
-	}(credentials, projects)
-
-	numFuncs += 1
-	go func(credentials string, projects []ProjectInfo) {
-		channel <- getSQLServerInstances(credentials, projects)
-	}(credentials, projects)
-
-	for i := 0; i < numFuncs; i++ {
-		counts := <-channel
-		resourceCount += counts
-	}
-
-	return resourceCount
-}
-
-func getStandardAgents(vms []VMInstanceInfo) []VMInstanceInfo {
-	var standardVMs []VMInstanceInfo
-
+	var vmsWithvCPU []VMInstanceInfo
 	for _, vm := range vms {
-		if vm.VMType == GCE_VM {
-			standardVMs = append(standardVMs, vm)
+		for _, mt := range machineTypes {
+			if vm.Zone == mt.Zone && vm.InstanceType == mt.Name {
+				vm.vCPU = mt.vCPUs
+			}
 		}
-	}
-	return standardVMs
-}
-
-func getEntepriseAgents(vms []VMInstanceInfo) []VMInstanceInfo {
-	var enterpriseVMs []VMInstanceInfo
-
-	for _, vm := range vms {
-		if vm.VMType == GKE_VM {
-			enterpriseVMs = append(enterpriseVMs, vm)
+		if vm.vCPU == 0 {
+			vm.vCPU = parseCustomInstanceType(vm.InstanceType)
 		}
+		vmsWithvCPU = append(vmsWithvCPU, vm)
 	}
-	return enterpriseVMs
-}
-
-func getLoadBalancers(credentials string, projects []ProjectInfo) int {
-	fmt.Println("Inventorying LoadBalancers")
-	ctx := context.Background()
-
-	loadbalancerCount := 0
 
 	for _, project := range projects {
-		if isServiceEnabled(project.Number, "compute.googleapis.com", credentials) {
-			instancesClient, err := compute.NewForwardingRulesRESTClient(ctx)
-
-			if err != nil {
-				fmt.Errorf("NewInstancesRESTClient: %v", err)
-				return 0
+		fmt.Println("Project:", project.Name)
+		var vcpus int32
+		for _, vm := range vmsWithvCPU {
+			if vm.Project == project.Name {
+				log.Debugln(vm.Name, vm.InstanceType, vm.vCPU)
+				vcpus += vm.vCPU
 			}
-			defer instancesClient.Close()
-
-			req := &computepb.AggregatedListForwardingRulesRequest{
-				Project: project.ID,
-			}
-
-			it := instancesClient.AggregatedList(ctx, req)
-			// Despite using the `MaxResults` parameter, you don't need to handle the pagination
-			// yourself. The returned iterator object handles pagination
-			// automatically, returning separated pages as you iterate over the results.
-			for {
-				pair, err := it.Next()
-				if err == iterator.Done {
-					break
-				}
-				if err != nil {
-					fmt.Errorf("getLoadBalancers pair iterator: %v", err)
-					return 0
-				}
-				//fmt.Println(pair)
-				if pair.Value.ForwardingRules != nil {
-					//fmt.Println(pair)
-					loadbalancerCount += len(pair.Value.ForwardingRules)
-				}
-			}
-		} else {
-			fmt.Println("Compute not enabled for ", project.Name)
 		}
+		fmt.Printf("vCPUs: %d\n\n", vcpus)
 	}
-
-	log.Debugln("LoadBalancers found", loadbalancerCount)
-	return loadbalancerCount
+	fmt.Println("----------------------------------------------")
+	fmt.Println("Number of GCP projects inventoried:", len(projects))
+	fmt.Println("----------------------------------------------")
 }
 
-func getGateways(credentials string, projects []ProjectInfo) int {
-	fmt.Println("Inventorying Gateways")
-	ctx := context.Background()
-
-	routerCount := 0
-
-	for _, project := range projects {
-		if isServiceEnabled(project.Number, "compute.googleapis.com", credentials) {
-			instancesClient, err := compute.NewRoutersRESTClient(ctx)
-
-			if err != nil {
-				fmt.Errorf("NewInstancesRESTClient: %v", err)
-				return 0
-			}
-			defer instancesClient.Close()
-
-			req := &computepb.AggregatedListRoutersRequest{
-				Project: project.ID,
-			}
-
-			it := instancesClient.AggregatedList(ctx, req)
-			// Despite using the `MaxResults` parameter, you don't need to handle the pagination
-			// yourself. The returned iterator object handles pagination
-			// automatically, returning separated pages as you iterate over the results.
-			for {
-				pair, err := it.Next()
-				if err == iterator.Done {
-					break
-				}
-				if err != nil {
-					fmt.Errorf("getGateways pair iterator: %v", err)
-					return 0
-				}
-				//fmt.Println(pair)
-				if pair.Value.Routers != nil {
-					//fmt.Println(pair)
-					routerCount += len(pair.Value.Routers)
-				}
-			}
-		} else {
-			fmt.Println("Compute not enabled for ", project.Name)
-		}
+func parseCustomInstanceType(instanceType string) int32 {
+	parts := strings.Split(instanceType, "-")
+	i, err := strconv.ParseInt(parts[2], 10, 32)
+	if err != nil {
+		panic(err)
 	}
-
-	log.Debugln("Gateways found", routerCount)
-	return routerCount
+	vcpus := int32(i)
+	return vcpus
 }
 
 func ParseCredentials(cmd *cobra.Command) string {
@@ -227,38 +111,6 @@ func ParseProjectsToIgnore(cmd *cobra.Command) []string {
 		}
 	}
 	return projectsToIgnore
-}
-
-func getSQLServerInstances(credentials string, projects []ProjectInfo) int {
-	fmt.Println("Inventorying SQL")
-	ctx := context.Background()
-	sqlService, err := sqladmin.NewService(ctx, option.WithCredentialsFile(credentials))
-	if err != nil {
-		log.Fatalln("error in getSQLServerInstances", err)
-	}
-
-	sqlCount := 0
-
-	for _, project := range projects {
-		if isServiceEnabled(project.Number, "sqladmin.googleapis.com", credentials) {
-			//fmt.Println("got in enabled")
-			req := sqlService.Instances.List(project.ID)
-			if err := req.Pages(ctx, func(page *sqladmin.InstancesListResponse) error {
-				//for _, db := range page.Items {
-				//	fmt.Println(db.Name)
-				//}
-				sqlCount += len(page.Items)
-				return nil
-			}); err != nil {
-				log.Fatal("err in getSQLServerInstances", err)
-			}
-		} else {
-			fmt.Println("SQL not enabled for", project.Name, "("+project.ID+")")
-		}
-	}
-
-	log.Debugln("SQL Servers found", sqlCount)
-	return sqlCount
 }
 
 func isProjectValid(project *cloudresourcemanager.Project, projectsToIgnore []string) bool {
@@ -303,9 +155,6 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 			}
 
 			it := instancesClient.AggregatedList(ctx, req)
-			// Despite using the `MaxResults` parameter, you don't need to handle the pagination
-			// yourself. The returned iterator object handles pagination
-			// automatically, returning separated pages as you iterate over the results.
 			for {
 				pair, err := it.Next()
 				if err == iterator.Done {
@@ -318,13 +167,11 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 				instances := pair.Value.Instances
 				if len(instances) > 0 {
 					for _, instance := range instances {
-						//fmt.Println(instance)
 						if instance.GetStatus() == "RUNNING" {
-							if _, ok := instance.GetLabels()["goog-gke-node"]; ok {
-								vms = append(vms, VMInstanceInfo{Zone: pair.Key, VMType: GKE_VM})
-							} else {
-								vms = append(vms, VMInstanceInfo{Zone: pair.Key, VMType: GCE_VM})
-							}
+							parts := strings.Split(*instance.MachineType, "/")
+							instanceType := parts[10]
+							zone := parts[8]
+							vms = append(vms, VMInstanceInfo{Project: project.Name, Zone: zone, InstanceType: instanceType, Name: *instance.Name})
 						}
 					}
 				}
@@ -336,6 +183,99 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 
 	log.Debugln("VMs found", len(vms))
 	return vms
+}
+
+func getMachinesTypes(credentials string, projects []ProjectInfo, vms []VMInstanceInfo) []MachineType {
+	fmt.Println("Getting Machine Types")
+	var project ProjectInfo
+	for _, p := range projects {
+		if isServiceEnabled(p.Number, "compute.googleapis.com", credentials) {
+			if project.ID == "" {
+				project = p
+			}
+		}
+	}
+
+	var machineTypes []MachineType
+	if len(vms) == 0 {
+		return machineTypes
+	}
+
+	var instanceTypes []string
+	var zones []string
+	for _, vm := range vms {
+		if !helpers.Contains(instanceTypes, vm.InstanceType) {
+			instanceTypes = append(instanceTypes, vm.InstanceType)
+		}
+		if !helpers.Contains(zones, vm.Zone) {
+			zones = append(zones, vm.Zone)
+		}
+	}
+
+	for _, instanceType := range instanceTypes {
+		mt := getMachineTypeByName(credentials, project, instanceType, zones)
+		if len(mt) > 0 {
+			machineTypes = append(machineTypes, mt...)
+		}
+	}
+
+	return machineTypes
+}
+
+func getMachineTypeByName(credentials string, project ProjectInfo, instanceType string, zones []string) []MachineType {
+
+	ctx := context.Background()
+
+	var machineTypes []MachineType
+
+	instancesClient, err := compute.NewMachineTypesRESTClient(ctx)
+
+	if err != nil {
+		fmt.Errorf("NewMachineTypesRESTClient: %v", err)
+		return nil
+	}
+	defer instancesClient.Close()
+
+	//format the query string
+	x := fmt.Sprintf(`(name = "%s") AND ((zone = "%s")`, instanceType, zones[0])
+	for _, z := range zones[1:] {
+		x += fmt.Sprintf(` OR (zone = "%s")`, z)
+	}
+	x += ")" //need the trailing ")"
+
+	var machineTypeQuery *string
+	machineTypeQuery = &x
+
+	req := &computepb.AggregatedListMachineTypesRequest{
+		Project: project.ID,
+		Filter:  machineTypeQuery,
+	}
+
+	it := instancesClient.AggregatedList(ctx, req)
+	for {
+		pair, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			fmt.Errorf("NewInstancesRESTClient pair iterator: %v", err)
+			return nil
+		}
+
+		types := pair.Value.MachineTypes
+
+		for _, mt := range types {
+			machineTypes = append(machineTypes, MachineType{
+				vCPUs: *mt.GuestCpus,
+				Name:  *mt.Name,
+				Zone:  *mt.Zone,
+			})
+		}
+
+	}
+
+	log.Debugln("Machine Type found", len(machineTypes))
+	return machineTypes
 }
 
 func getProjects(credentials string, projectsToIgnore []string) []ProjectInfo {
