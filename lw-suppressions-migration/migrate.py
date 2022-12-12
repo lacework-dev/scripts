@@ -281,7 +281,7 @@ def createPayload (awssupppresions):
 
 def main():
     try:
-        lw = LaceworkClientOverride() # This would leverage your default Lacework CLI profile. 
+        lw = LaceworkClientOverride() # This will leverage your default Lacework CLI profile. 
         data = lw.suppressions.get("aws")
         awssuppressions = data["data"][0]["recommendationExceptions"]
         print  ("#### Constructing the script object")
