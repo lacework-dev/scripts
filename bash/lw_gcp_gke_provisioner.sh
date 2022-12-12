@@ -53,7 +53,7 @@ then
     TMP_KEY_FILE="./.lwsvc-tmp-key.json"
     gcloud iam service-accounts keys create $TMP_KEY_FILE --iam-account="$CLIENT_EMAIL" --format json
     PRIVATE_KEY_ID=$(cat $TMP_KEY_FILE | jq -r '.private_key_id')
-    PRIVATE_KEY=$(cat $TMP_KEY_FILE | jq '.private_key')
+    PRIVATE_KEY=$(cat $TMP_KEY_FILE | jq '.private_key' | tr -d '"')
     #rm $TMP_KEY_FILE
 fi
 
@@ -125,7 +125,7 @@ then
                     \"clientId\": \"$CLIENT_ID\",
                     \"clientEmail\": \"$CLIENT_EMAIL\",
                     \"privateKeyId\": \"$PRIVATE_KEY_ID\",
-                    \"privateKey\": $PRIVATE_KEY
+                    \"privateKey\": \"$PRIVATE_KEY\"
                 },
                 \"integrationType\": \"PROJECT\",
                 \"projectId\": \"$PROJECT_ID\",
@@ -147,7 +147,7 @@ else
                     \"clientId\": \"$CLIENT_ID\",
                     \"clientEmail\": \"$CLIENT_EMAIL\",
                     \"privateKeyId\": \"$PRIVATE_KEY_ID\",
-                    \"privateKey\": $PRIVATE_KEY
+                    \"privateKey\": \"$PRIVATE_KEY\"
                 },
                 \"integrationType\": \"ORGANIZATION\",
                 \"projectId\": \"$PROJECT_ID\",
