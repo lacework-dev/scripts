@@ -72,7 +72,7 @@ gcloud pubsub topics create "$TOPIC_NAME"
 if [ -z "$ORGANIZATION_ID" ]
 then
     SINK_SERVICE_ACCOUNT=$(gcloud logging sinks create $SINK_NAME "pubsub.googleapis.com/projects/$PROJECT_ID/topics/$TOPIC_NAME" \
-        --log-filter "protoPayload.@type='type.googleapis.com/google.cloud.audit.AuditLog' AND protoPayload.serviceName = 'k8s.io'" \
+        --log-filter "protoPayload.@type=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND protoPayload.serviceName = \"k8s.io\"" \
         --exclusion=name=livezexclusion,description="Exclude livez logs",filter="protoPayload.resourceName=\"livez\" " \
         --exclusion=name=readyzexclusion,description="Exclude readyz logs",filter="protoPayload.resourceName=\"readyz\" " \
         --exclusion=name=metricsexclusion,description="Exclude metrics logs",filter="protoPayload.resourceName=\"metrics\" " \
@@ -81,7 +81,7 @@ then
 else
     SINK_SERVICE_ACCOUNT=$(gcloud logging sinks create $SINK_NAME "pubsub.googleapis.com/$TOPIC_NAME" \
         --oranization="$ORGANIZATION_ID" --include-children \
-        --log-filter "protoPayload.@type='type.googleapis.com/google.cloud.audit.AuditLog' AND protoPayload.serviceName = 'k8s.io'" \
+        --log-filter "protoPayload.@type=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND protoPayload.serviceName = \"k8s.io\"" \
         --exclusion=name=livezexclusion,description="Exclude livez logs",filter="protoPayload.resourceName=\"livez\" " \
         --exclusion=name=readyzexclusion,description="Exclude readyz logs",filter="protoPayload.resourceName=\"readyz\" " \
         --exclusion=name=metricsexclusion,description="Exclude metrics logs",filter="protoPayload.resourceName=\"metrics\" " \
