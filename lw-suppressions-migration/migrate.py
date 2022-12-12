@@ -1,7 +1,12 @@
 from laceworksdk import LaceworkClient
+from laceworksdk.api.v1.suppressions import SuppressionsAPI
 import logging
 import argparse
 import json
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose", help="increase output verbosity",
@@ -19,21 +24,34 @@ if args.verbose:
 #                     'comments': ''
 #                 }]
 
-class PolicyExceptionConstraint:
-    def __init__(self, fieldKey, fieldValues):
-        self.fieldKey = fieldKey
-        self.fieldValues = fieldValues
+class SuppressionsAPIOverride (SuppressionsAPI):
+    def __init__(self, session):
+        super().__init__(session)
 
-class PolicyException:
-    allowedConstraints = ["accountIds", "regionNames", "resourceNames", "resourceTags"]
-    def __init__(self, policyID, description, comments):
-        self.policyID = policyID 
-        self.comments = description
-        self.constraints = []
-        self.comments = comments
-    def addConstraint (self, constraint):
-        if (constraint.fieldKey in self.allowedConstraints):
-            self.constraints.add(constraint)
+    def get(self,
+            type,
+            recommendation_id=None):
+        if recommendation_id:
+            logger.info(f"Getting {type} suppression {recommendation_id} from Lacework...")
+            api_uri = f"/api/v2/suppressions/{type}/allExceptions/{recommendation_id}"
+        else:
+            logger.info(f"Getting {type} suppressions from Lacework...")
+            api_uri = f"/api/v2/suppressions/{type}/allExceptions"
+        response = self._session.get(api_uri)
+        logger.info(f"Got these suppressions from Lacework..."+str(response.json()))
+        return response.json()
+class LaceworkClientOverride (LaceworkClient):
+    def __init__(self,
+                    account=None,
+                    subaccount=None,
+                    api_key=None,
+                    api_secret=None,
+                    instance=None,
+                    base_domain=None,
+                    profile=None):           
+        super().__init__()
+        self.suppressions = SuppressionsAPIOverride(session=self._session)
+
 
 class LPP:
     def __init__ (self, lwPolicyNumber, listOfConstraintTypes):
@@ -263,7 +281,7 @@ def createPayload (awssupppresions):
 
 def main():
     try:
-        lw = LaceworkClient() # This would leverage your default Lacework CLI profile. 
+        lw = LaceworkClientOverride() # This will leverage your default Lacework CLI profile. 
         data = lw.suppressions.get("aws")
         awssuppressions = data["data"][0]["recommendationExceptions"]
         print  ("#### Constructing the script object")
@@ -275,3 +293,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
