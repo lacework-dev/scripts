@@ -8,6 +8,8 @@
 # -  If you specify the option to include children when creating the sink at the organization level, all the projects in the organization will export the audit logs to the bucket.
 # - The procedure below requires that the jq utility is installed. The jq utility is a flexible command-line JSON processor. For more information, see https://stedolan.github.io/jq/
 
+set -e
+
 # Random String
 RANDOM=$(xxd -l 4 -c 4 -p < /dev/random)
 
