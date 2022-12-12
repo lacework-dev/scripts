@@ -192,6 +192,7 @@ equivalences_map = {
 def createPayload (awssupppresions):
     payloadsText=[]
     discardedSuppressions=[]
+    disabled_policies=[]
     for k,v in awssupppresions.items():
         #k is 'AWS_CIS_1_11'
         #v is {'enabled': False, 'suppressionConditions': [{'accountIds': ['716829324861'], 'regionNames': ['ALL_REGIONS'], 'resourceNames': [], 'resourceTags': [], 'comments': ''}]},
@@ -205,6 +206,12 @@ def createPayload (awssupppresions):
             continue
         LPPPolicy = equivalences_map[k].lwpolicyID
         suppcount=0
+        if not v["enabled"] and LPPPolicy not in disabled_policies:
+            logging.info("# Disabling policy "+ LPPPolicy + "as legacy policy was disabled")
+            lwapitext="lacework policy disable "+ LPPPolicy
+            print (lwapitext+"\n")
+            payloadsText.append(lwapitext)
+            
         for suppressionCondition in v["suppressionConditions"]: #handle multiple suppressions per policy 
             payload = {}
             payload["description"]="Migrating suppression "+str(suppcount)+" from old policy "+k
