@@ -242,7 +242,7 @@ def createPayload (awssupppresions):
         suppcount=0
         if not v["enabled"] and LPPPolicy not in disabled_policies:
             logging.info("# Disabling policy "+ LPPPolicy + "as legacy policy was disabled")
-            lwapitext="lacework disable "+ LPPPolicy
+            lwapitext="lacework policy disable "+ LPPPolicy
             print (lwapitext+"\n")
             payloadsText.append(lwapitext)
             
