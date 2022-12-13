@@ -31,7 +31,7 @@ function isCloudSQLEnabled {
 }
 
 function getGKEInstances {
-  gcloud compute instances list --format json | jq '[.[] | select(.name | contains("gke-"))] | length'
+  gcloud container clusters list --format json | jq '[.[].currentNodeCount] | add'
 }
 
 function getGCEInstances {
@@ -94,7 +94,7 @@ echo "######################################################################"
 echo "Lacework inventory collection complete."
 echo ""
 echo "GCE Instances:   $GCE_INSTANCES"
-echo "GKE Instances:   $GKE_INSTANCES"
+echo "GKE Nodes:   $GKE_INSTANCES"
 echo "Load Balancers:  $LOAD_BALANCERS"
 echo "Gateways:        $GATEWAYS"
 echo "SQL Instances:   $SQL_INSTANCES"
