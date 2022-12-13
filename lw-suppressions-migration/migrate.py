@@ -247,7 +247,7 @@ def createPayload (awssupppresions):
             for fieldKey,value in suppressionCondition.items(): 
                 #check if LPP supports the same fieldKey as the old Suppression
                 if fieldKey == "comments":
-                    if value != "":
+                    if value != "" and value is not None:
                         logging.info("# Original comment for suppression in policy " + k +  ": " + value )
                 elif fieldKey not in equivalences_map[k].listOfConstraintTypes:
                     if len(value)>0:
