@@ -9,6 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-p", "--profile", help="use a specific Lacework CLI profile")
 parser.add_argument("-v", "--verbose", help="increase output verbosity",
                     action="store_true")
 args = parser.parse_args()
@@ -41,15 +42,8 @@ class SuppressionsAPIOverride (SuppressionsAPI):
         logger.info(f"Got these suppressions from Lacework..."+str(response.json()))
         return response.json()
 class LaceworkClientOverride (LaceworkClient):
-    def __init__(self,
-                    account=None,
-                    subaccount=None,
-                    api_key=None,
-                    api_secret=None,
-                    instance=None,
-                    base_domain=None,
-                    profile=None):           
-        super().__init__()
+    def __init__(self,cliprofile=None):           
+        super().__init__(profile=cliprofile)
         self.suppressions = SuppressionsAPIOverride(session=self._session)
 
 
@@ -281,7 +275,7 @@ def createPayload (awssupppresions):
 
 def main():
     try:
-        lw = LaceworkClientOverride() # This will leverage your default Lacework CLI profile. 
+        lw = LaceworkClientOverride(args.profile)
         data = lw.suppressions.get("aws")
         awssuppressions = data["data"][0]["recommendationExceptions"]
         print  ("#### Constructing the script object")
