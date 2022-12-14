@@ -95,8 +95,8 @@ function printOutput () {
   echo "    Lacework Agentless Preflight Results"
   echo "--------------------------------------------"
   echo ""
-  echo "Deploy Self Managed Permissions (Administration Role)? $RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE"
-  echo "Deploy Self Managed Permissions (Execution Role)? $RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE"
+  echo "Deploy CloudFormation StackSet Administration Role? $RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE"
+  echo "Deploy CloudFormation StackSet Execution Role? $RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE"
   echo "Deploy ECS Service Linked Role?  $RESULT_ECS_ROLE_DEPLOY"
   echo ""
   echo "Recommended Deployment Regions:"
@@ -116,10 +116,10 @@ fi
 result=$(hasStackSetExecutionRole)
 if [[ ! -z $result ]]; then
   echo "${OK}  Cloudformation StackSet Execution role exists."
-  RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE="No"
+  RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE="No"
 else
   echo "${WARN}  Cloudformation StackSet Execution role does not exist."
-  RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE="Yes"
+  RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE="Yes"
 fi
 
 result=$(hasEcsRole)
