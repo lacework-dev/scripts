@@ -96,7 +96,7 @@ func Run(profiles []string, regions []string, debug bool) {
 		}
 
 		fmt.Println("----------------------------------------------")
-		fmt.Printf("Total AWS vCPUs %d\n", totalvCPU)
+		fmt.Printf("AWS vCPUs %d for profile %s\n", totalvCPU, p)
 
 		fmt.Println("\nAccount Breakdown")
 		for account, vcpus := range accountVCPUS {
@@ -176,7 +176,7 @@ func getRegions(cfg aws.Config) []string {
 
 func getInstanceTypesByRegion(cfg aws.Config, region string) []InstanceType {
 	var instanceTypes []InstanceType
-	log.Println("aws cfg", cfg)
+	//log.Println("aws cfg", cfg)
 
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstanceTypesPaginator(service, &ec2.DescribeInstanceTypesInput{})
