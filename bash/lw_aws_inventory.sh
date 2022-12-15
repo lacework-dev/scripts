@@ -10,6 +10,9 @@
 
 
 AWS_PROFILE=default
+# Just in case the interactive prompt is enabled.
+# See: https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-parameters-prompting.html
+AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=20
 
 # Usage: ./lw_aws_inventory.sh
