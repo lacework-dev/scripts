@@ -16,17 +16,22 @@ AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=20
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp::t" opt; do
+while getopts ":jnp::t" opt; do
   case ${opt} in
+    n )
+      # Don't use a profile at all. Helpful for when tools like
+      # 99designs' aws-vault is wrapping the current bash session
+      SET_AWS_PROFILE_OPT="no"
+      ;;
     p )
       AWS_PROFILE=$OPTARG
       ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-n|[-p profile]]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-n|[-p profile]]" 1>&2
       exit 1
       ;;
   esac
@@ -47,47 +52,65 @@ LAMBDA_FNS=0
 LAMBDA_FNS_EXIST="No"
 
 function getAccountId {
-  aws --profile $profile sts get-caller-identity --query "Account" --output text
+  local profile_opt="$2"
+  aws $profile_opt sts get-caller-identity --query "Account" --output text
 }
 
 function getRegions {
-  aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  local profile_opt="$2"
+  aws $profile_opt ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
-  aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
-  aws --profile $profile rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt rds describe-db-instances --region $r --output json --no-paginate | jq '.DBInstances | length'
 }
 
 function getRedshift {
-  aws --profile $profile redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt redshift describe-clusters --region $r --output json --no-paginate | jq '.Clusters | length'
 }
 
 function getElbv1 {
-  aws --profile $profile elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt elb describe-load-balancers --region $r  --output json --no-paginate | jq '.LoadBalancerDescriptions | length'
 }
 
 function getElbv2 {
-  aws --profile $profile elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt elbv2 describe-load-balancers --region $r --output json --no-paginate | jq '.LoadBalancers | length'
 }
 
 function getNatGateways {
-  aws --profile $profile ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt ec2 describe-nat-gateways --region $r --output json --no-paginate | jq '.NatGateways | length'
 }
 
 function getECSFargateClusters {
-  aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
 }
 
 function getECSFargateRunningTasks {
+  local r="$1"
+  local profile_opt="$2"
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
-    allclustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    allclustertasks=$(aws $profile_opt ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
     if [ -n "${allclustertasks}" ]; then
-      fargaterunningtasks=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | .containers[] | select(.lastStatus=="RUNNING")] | length')
+      fargaterunningtasks=$(aws $profile_opt ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | .containers[] | select(.lastStatus=="RUNNING")] | length')
       RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
     fi
   done
@@ -97,12 +120,14 @@ function getECSFargateRunningTasks {
 
 
 function getLambdaFunctions {
-  aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
+  local r="$1"
+  local profile_opt="$2"
+  aws $profile_opt lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
 }
 
 function calculateInventory {
-  profile=$1
-  accountid=$(getAccountId $profile)
+  local profile_opt=$1
+  local accountid=$(getAccountId $profile_opt)
 
   accountEC2Instances=0
   accountRDSInstances=0
@@ -114,51 +139,53 @@ function calculateInventory {
   accountECSFargateRunningTasks=0
   accountLambdaFunctions=0
 
-  printf "$profile, $accountid, "
+  printf "${profile_opt:-Not Specified}, $accountid, "
   for r in $(getRegions); do
+    if [ "$r" = "af-south-1" ]; then continue; fi
     printf "$r "
 
-    instances=$(getInstances $r $profile)
+    instances=$(getInstances $r $profile_opt)
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
     accountEC2Instances=$(($accountEC2Instances + $instances))
 
-    rds=$(getRDSInstances $r $profile)
+    rds=$(getRDSInstances $r $profile_opt)
     RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
     accountRDSInstances=$(($accountRDSInstances + $rds))
 
-    redshift=$(getRedshift $r $profile)
+    redshift=$(getRedshift $r $profile_opt)
     REDSHIFT_CLUSTERS=$(($REDSHIFT_CLUSTERS + $redshift))
     accountRedshiftClusters=$(($accountRedshiftClusters + $redshift))
 
-    elbv1=$(getElbv1 $r $profile)
+    elbv1=$(getElbv1 $r $profile_opt)
     ELB_V1=$(($ELB_V1 + $elbv1))
     accountELBV1=$(($accountELBV1 + $elbv1))
 
-    elbv2=$(getElbv2 $r $profile)
+    elbv2=$(getElbv2 $r $profile_opt)
     ELB_V2=$(($ELB_V2 + $elbv2))
     accountELBV2=$(($accountELBV2 + $elbv2))
 
-    natgw=$(getNatGateways $r $profile)
+    natgw=$(getNatGateways $r $profile_opt)
     NAT_GATEWAYS=$(($NAT_GATEWAYS + $natgw))
     accountNATGateways=$(($accountNATGateways + $natgw))
 
-    ecsfargateclusters=$(getECSFargateClusters $r $profile)
+    ecsfargateclusters=$(getECSFargateClusters $r $profile_opt)
     ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
     ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
     accountECSFargateClusters=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
 
-    ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile)
+    ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile_opt)
     ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
     accountECSFargateRunningTasks=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
 
-    lambdafns=$(getLambdaFunctions $r $profile)
+    lambdafns=$(getLambdaFunctions $r $profile_opt)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
     accountLambdaFunctions=$(($LAMBDA_FNS + $lambdafns))
-    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
+    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi
 
     regiontotal=$(($instances + $rds + $redshift + $elbv1 + $elbv2 + $natgw))
 
   done
+
   accountTotal=$(($accountEC2Instances + $accountRDSInstances + $accountRedshiftClusters + $accountELBV1 + $accountELBV2 + $accountNATGateways))
 
   echo , "$accountEC2Instances", "$accountRDSInstances", "$accountRedshiftClusters", "$accountELBV1", "$accountELBV2", "$accountNATGateways", "$accountTotal", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountLambdaFunctions"
@@ -196,7 +223,11 @@ echo "Profile", "Account ID", "Regions", "EC2 Instances", "RDS Instances", "Reds
 for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
 do
     ACCOUNTS=$(($ACCOUNTS + 1))
-    calculateInventory $PROFILE
+    if [ "$SET_AWS_PROFILE_OPT" = "no" ]; then
+        calculateInventory ""
+    else
+        calculateInventory "--profile $PROFILE"
+    fi
 done
 
 textoutput
