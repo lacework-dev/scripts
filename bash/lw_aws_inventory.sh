@@ -8,7 +8,7 @@
 # there are no spaces between accounts in the list
 # 2. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
 
-
+set -e
 AWS_PROFILE=default
 # Just in case the interactive prompt is enabled.
 # See: https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-parameters-prompting.html
