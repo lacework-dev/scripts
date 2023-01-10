@@ -32,9 +32,11 @@ shift $((OPTIND -1))
 
 # Set the initial counts to zero.
 ACCOUNTS=0
+EC2_INSTANCES=0
 EC2_INSTANCE_VCPU=0
-FARGATE_VCPU=0
-LAMBDA_MEMORY=0
+ECS_FARGATE_CLUSTERS=0
+ECS_FARGATE_RUNNING_TASKS=0
+ECS_FARGATE_VCPUS=0
 
 function getAccountId {
   aws --profile $profile sts get-caller-identity --query "Account" --output text
@@ -44,10 +46,18 @@ function getRegions {
   aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
-function getInstances {
+function getEC2Instances {
   aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
+function getEC2InstacevCPUs {
+  cpucounts=$(aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
+  returncount=0
+  for cpucount in $cpucounts; do
+    returncount=$(($returncount + $cpucount))
+  done
+  echo "${returncount}"
+}
 
 function getECSFargateClusters {
   aws --profile $profile ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
@@ -66,6 +76,21 @@ function getECSFargateRunningTasks {
   echo "${RUNNING_FARGATE_TASKS}"
 }
 
+function getECSFargateRunningvCPUs {
+  RUNNING_FARGATE_VCPUS=0
+  for c in $ecsfargateclusters; do
+    allclustertasks=$(aws --profile $profile ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    if [ -n "${allclustertasks}" ]; then
+      vcpucounts=$(aws --profile $profile ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | .containers[] | select(.lastStatus=="RUNNING")] | .[].cpu | tonumber')
+
+      for vcpucount in $vcpucounts; do
+        RUNNING_FARGATE_VCPUS=$(($RUNNING_FARGATE_VCPUS + $vcpucount))
+      done
+    fi
+  done
+
+  echo "${RUNNING_FARGATE_VCPUS}"
+}
 
 function getLambdaFunctions {
   aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
@@ -76,40 +101,48 @@ function calculateInventory {
   accountid=$(getAccountId $profile)
 
   accountEC2Instances=0
+  accountEC2vCPUs=0
   accountECSFargateClusters=0
   accountECSFargateRunningTasks=0
+  accountECSFargatevCPUs=0
   accountLambdaFunctions=0
+  accountTotalvCPUs=0
 
-  printf "$profile, $accountid, "
+  printf "$profile, $accountid,"
   for r in $(getRegions); do
-    printf "$r "
+    printf " $r"
 
-    instances=$(getInstances $r $profile)
+    instances=$(getEC2Instances $r $profile)
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
     accountEC2Instances=$(($accountEC2Instances + $instances))
+
+    ec2vcpu=$(getEC2InstacevCPUs $r $profile)
+    EC2_VCPUS=$(($EC2_VCPUS + $ec2vcpu))
+    accountEC2vCPUs=$(($accountEC2vCPUs + $ec2vcpu))
 
     ecsfargateclusters=$(getECSFargateClusters $r $profile)
     ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
     ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
-    accountECSFargateClusters=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
+    accountECSFargateClusters=$(($accountECSFargateClusters + $ecsfargateclusterscount))
 
     ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile)
     ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
-    accountECSFargateRunningTasks=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
+    accountECSFargateRunningTasks=$(($accountECSFargateRunningTasks + $ecsfargaterunningtasks))
+
+    ecsfargatevcpu=$(getECSFargateRunningvCPUs $r $profile)
+    ECS_FARGATE_VCPUS=$(($ECS_FARGATE_VCPUS + $ecsfargatevcpu))
+    accountECSFargatevCPUs=$(($accountECSFargatevCPUs + $ecsfargatevcpu))
 
     lambdafns=$(getLambdaFunctions $r $profile)
     LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
     accountLambdaFunctions=$(($LAMBDA_FNS + $lambdafns))
     if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
-
-    regiontotal=$(($instances + $rds + $redshift + $elbv1 + $elbv2 + $natgw))
-
   done
-  accountTotal=$(($accountEC2Instances + $accountRDSInstances + $accountRedshiftClusters + $accountELBV1 + $accountELBV2 + $accountNATGateways))
 
-  echo , "$accountEC2Instances", "$accountRDSInstances", "$accountRedshiftClusters", "$accountELBV1", "$accountELBV2", "$accountNATGateways", "$accountTotal", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountLambdaFunctions"
+  accountECSFargatevCPUs=$(($accountECSFargatevCPUs / 1024))
+  accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs))
 
-  TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
+  echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargatevCPUs", "$accountTotalvCPUs", "$accountLambdaFunctions"
 }
 
 function textoutput {
@@ -118,31 +151,35 @@ function textoutput {
   echo ""
   echo "Accounts Analyzed: $ACCOUNTS"
   echo ""
-  echo "EC2 Instances:     $EC2_INSTANCES"
-  echo "RDS Instances:     $RDS_INSTANCES"
-  echo "Redshift Clusters: $REDSHIFT_CLUSTERS"
-  echo "v1 Load Balancers: $ELB_V1"
-  echo "v2 Load Balancers: $ELB_V2"
-  echo "NAT Gateways:      $NAT_GATEWAYS"
+  echo "EC2 Information"
   echo "===================="
-  echo "Total Resources:   $TOTAL"
+  echo "EC2 Instances:     $EC2_INSTANCES"
+  echo "EC2 vCPUs:         $EC2_VCPUS"
   echo ""
   echo "Fargate Information"
   echo "===================="
   echo "ECS Fargate Clusters:                 $ECS_FARGATE_CLUSTERS"
   echo "ECS Fargate Running Containers/Tasks: $ECS_FARGATE_RUNNING_TASKS"
+  echo "ECS Fargate vCPUs:                    $ECS_FARGATE_VCPUS"
   echo ""
-  echo "Additional Serverless Inventory Details (NOT included in Total Resources count above):"
+  echo "License Summary"
+  echo "===================="
+  echo "Total vCPUs:       $TOTAL_VCPUS"
+  echo ""
+  echo "Additional Serverless Inventory Details (NOT included in license summary):"
   echo "===================="
   echo "Lambda Functions Exist:         $LAMBDA_FNS_EXIST"
 }
 
-#echo "Profile", "Account ID", "Regions", "EC2 Instances", "RDS Instances", "Redshift Clusters", "v1 Load Balancers", "v2 Load Balancers", "NAT Gateways", "Total Resources", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "Lambda Functions"
+echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate vCPUs", "Total vCPUSs", "Lambda Functions"
 
 for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
 do
     ACCOUNTS=$(($ACCOUNTS + 1))
     calculateInventory $PROFILE
 done
+
+ECS_FARGATE_VCPUS=$(($ECS_FARGATE_VCPUS / 1024))
+TOTAL_VCPUS=$(($EC2_VCPUS + $ECS_FARGATE_VCPUS))
 
 textoutput
