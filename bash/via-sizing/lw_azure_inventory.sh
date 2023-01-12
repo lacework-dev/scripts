@@ -34,6 +34,16 @@ function removeMap {
   fi
 }
 
+function installResourceGraphIfNotPresent {
+  resourceGraphPresent=$(az extension list  --query "contains([].name, \`resource-graph\`)")
+  if [ "$resourceGraphPresent" != true ] ; then
+    echo "resource-graph extension not present in Az CLI installation. Enabling..."
+    az extension add --name "resource-graph"
+  else
+    echo "resource-graph extension already present..."
+  fi
+}
+
 # set trap to remove tmp_map file regardless of exit status
 trap removeMap EXIT
 
@@ -41,6 +51,8 @@ trap removeMap EXIT
 # Set the initial counts to zero.
 AZURE_VMS_VCPU=0
 AZURE_VMSS_VCPU=0
+
+installResourceGraphIfNotPresent
 
 echo "Building Azure VM SKU to vCPU map..."
 az vm list-skus --resource-type virtualmachines |\
