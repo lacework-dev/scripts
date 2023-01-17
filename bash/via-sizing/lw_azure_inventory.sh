@@ -6,7 +6,6 @@
 # This script can be run from Azure Cloud Shell.
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
 while getopts ":m:s:" opt; do
@@ -35,6 +34,16 @@ function removeMap {
   fi
 }
 
+function installResourceGraphIfNotPresent {
+  resourceGraphPresent=$(az extension list  --query "contains([].name, \`resource-graph\`)")
+  if [ "$resourceGraphPresent" != true ] ; then
+    echo "resource-graph extension not present in Az CLI installation. Enabling..."
+    az extension add --name "resource-graph"
+  else
+    echo "resource-graph extension already present..."
+  fi
+}
+
 # set trap to remove tmp_map file regardless of exit status
 trap removeMap EXIT
 
@@ -42,6 +51,8 @@ trap removeMap EXIT
 # Set the initial counts to zero.
 AZURE_VMS_VCPU=0
 AZURE_VMSS_VCPU=0
+
+installResourceGraphIfNotPresent
 
 echo "Building Azure VM SKU to vCPU map..."
 az vm list-skus --resource-type virtualmachines |\
@@ -59,7 +70,7 @@ if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
   # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
   vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
         --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
-elif [[ ! -z "$SUBSCRIPTION" ]]
+elif [[ ! -z "$SUBSCRIPTION" ]]; then
   # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
   vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
         --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
@@ -95,7 +106,7 @@ if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
   # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
   vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
         --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
-elif [[ ! -z "$SUBSCRIPTION" ]]
+elif [[ ! -z "$SUBSCRIPTION" ]]; then
   # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
   vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
         --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
