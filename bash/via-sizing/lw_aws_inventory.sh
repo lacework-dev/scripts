@@ -37,6 +37,8 @@ EC2_INSTANCE_VCPU=0
 ECS_FARGATE_CLUSTERS=0
 ECS_FARGATE_RUNNING_TASKS=0
 ECS_FARGATE_VCPUS=0
+LAMBDA_FUNCTIONS=0
+LAMBDA_MEMORY_TOTAL=0
 
 function getAccountId {
   aws --profile $profile sts get-caller-identity --query "Account" --output text
@@ -96,6 +98,16 @@ function getLambdaFunctions {
   aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
 }
 
+function getLambdaFunctionMemory {
+  memoryForAllFunctions=$(aws --profile $profile lambda list-functions --region $r --output json --no-paginate | jq '.Functions[].MemorySize')
+  TOTAL_LAMBDA_MEMORY=0
+  for memory in $memoryForAllFunctions; do
+    TOTAL_LAMBDA_MEMORY=$(($TOTAL_LAMBDA_MEMORY + $memory))
+  done
+  
+  echo "${TOTAL_LAMBDA_MEMORY}"
+}
+
 function calculateInventory {
   profile=$1
   accountid=$(getAccountId $profile)
@@ -106,10 +118,12 @@ function calculateInventory {
   accountECSFargateRunningTasks=0
   accountECSFargatevCPUs=0
   accountLambdaFunctions=0
+  accountLambdaMemory=0
   accountTotalvCPUs=0
 
   printf "$profile, $accountid,"
   for r in $(getRegions); do
+  #for r in "us-east-1"; do
     printf " $r"
 
     instances=$(getEC2Instances $r $profile)
@@ -133,16 +147,20 @@ function calculateInventory {
     ECS_FARGATE_VCPUS=$(($ECS_FARGATE_VCPUS + $ecsfargatevcpu))
     accountECSFargatevCPUs=$(($accountECSFargatevCPUs + $ecsfargatevcpu))
 
-    lambdafns=$(getLambdaFunctions $r $profile)
-    LAMBDA_FNS=$(($LAMBDA_FNS + $lambdafns))
-    accountLambdaFunctions=$(($LAMBDA_FNS + $lambdafns))
-    if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
+    lambdafunctions=$(getLambdaFunctions $r $profile)
+    LAMBDA_FUNCTIONS=$(($LAMBDA_FUNCTIONS + $lambdafunctions))
+    accountLambdaFunctions=$(($accountLambdaFunctions + $lambdafunctions))
+
+    lambdamemory=$(getLambdaFunctionMemory $r $profile)
+    LAMBDA_MEMORY_TOTAL=$(($LAMBDA_MEMORY_TOTAL + $lambdamemory))
+    accountLambdaMemory=$(($accountLambdaMemory + $lambdamemory))
   done
 
   accountECSFargatevCPUs=$(($accountECSFargatevCPUs / 1024))
-  accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs))
+  accountLambdavCPUs=$(($accountLambdaMemory / 1024))
+  accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs + $accountLambdavCPUs))
 
-  echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargatevCPUs", "$accountTotalvCPUs", "$accountLambdaFunctions"
+  echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargatevCPUs",  "$accountLambdaFunctions", "$accountLambdaMemory", "$accountLambdavCPUs", "$accountTotalvCPUs"
 }
 
 function textoutput {
@@ -162,16 +180,19 @@ function textoutput {
   echo "ECS Fargate Running Containers/Tasks: $ECS_FARGATE_RUNNING_TASKS"
   echo "ECS Fargate vCPUs:                    $ECS_FARGATE_VCPUS"
   echo ""
+  echo "Lambda Information"
+  echo "===================="
+  echo "Lambda Functions:     $LAMBDA_FUNCTIONS"
+  echo "MB Lambda Memory:     $LAMBDA_MEMORY_TOTAL"
+  echo "Lambda License vCPUs: $LAMBDA_VCPUS"
+  echo ""
   echo "License Summary"
   echo "===================="
   echo "Total vCPUs:       $TOTAL_VCPUS"
-  echo ""
-  echo "Additional Serverless Inventory Details (NOT included in license summary):"
-  echo "===================="
-  echo "Lambda Functions Exist:         $LAMBDA_FNS_EXIST"
 }
 
-echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate vCPUs", "Total vCPUSs", "Lambda Functions"
+echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+
 
 for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
 do
@@ -180,6 +201,7 @@ do
 done
 
 ECS_FARGATE_VCPUS=$(($ECS_FARGATE_VCPUS / 1024))
-TOTAL_VCPUS=$(($EC2_VCPUS + $ECS_FARGATE_VCPUS))
+LAMBDA_VCPUS=$(($LAMBDA_MEMORY_TOTAL / 1024))
+TOTAL_VCPUS=$(($EC2_VCPUS + $ECS_FARGATE_VCPUS + $LAMBDA_VCPUS))
 
 textoutput
