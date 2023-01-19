@@ -123,7 +123,7 @@ func getLoadBalancers(credentials string, projects []ProjectInfo) int {
 	loadbalancerCount := 0
 
 	for _, project := range projects {
-		if isServiceEnabled(project.Number, "compute.googleapis.com", credentials) {
+		if isServiceEnabled(project, "compute.googleapis.com", credentials) {
 			instancesClient, err := compute.NewForwardingRulesRESTClient(ctx)
 
 			if err != nil {
@@ -156,7 +156,7 @@ func getLoadBalancers(credentials string, projects []ProjectInfo) int {
 				}
 			}
 		} else {
-			fmt.Println("Compute not enabled for ", project.Name)
+			fmt.Println("Compute not enabled for ", project.Name, "("+project.ID+")")
 		}
 	}
 
@@ -171,7 +171,7 @@ func getGateways(credentials string, projects []ProjectInfo) int {
 	routerCount := 0
 
 	for _, project := range projects {
-		if isServiceEnabled(project.Number, "compute.googleapis.com", credentials) {
+		if isServiceEnabled(project, "compute.googleapis.com", credentials) {
 			instancesClient, err := compute.NewRoutersRESTClient(ctx)
 
 			if err != nil {
@@ -204,7 +204,7 @@ func getGateways(credentials string, projects []ProjectInfo) int {
 				}
 			}
 		} else {
-			fmt.Println("Compute not enabled for ", project.Name)
+			fmt.Println("Compute not enabled for ", project.Name, "("+project.ID+")")
 		}
 	}
 
@@ -240,7 +240,7 @@ func getSQLServerInstances(credentials string, projects []ProjectInfo) int {
 	sqlCount := 0
 
 	for _, project := range projects {
-		if isServiceEnabled(project.Number, "sqladmin.googleapis.com", credentials) {
+		if isServiceEnabled(project, "sqladmin.googleapis.com", credentials) {
 			//fmt.Println("got in enabled")
 			req := sqlService.Instances.List(project.ID)
 			if err := req.Pages(ctx, func(page *sqladmin.InstancesListResponse) error {
@@ -266,17 +266,17 @@ func isProjectValid(project *cloudresourcemanager.Project, projectsToIgnore []st
 	return yesno
 }
 
-func isServiceEnabled(projectNumber int64, service string, credentials string) bool {
+func isServiceEnabled(project ProjectInfo, service string, credentials string) bool {
 	ctx := context.Background()
 	c, err := serviceusage.NewService(ctx, option.WithCredentialsFile(credentials))
 	if err != nil {
-		fmt.Println("service usage new service error", err)
+		fmt.Println("service usage new service error for project ", project.ID, err)
 		return false
 	}
 
-	resp, err := c.Services.Get(fmt.Sprintf("projects/%d/services/%s", projectNumber, service)).Do()
+	resp, err := c.Services.Get(fmt.Sprintf("projects/%d/services/%s", project.Number, service)).Do()
 	if err != nil {
-		log.Fatalln("services get error", err)
+		log.Println("services get error", project.ID, err)
 		return false
 	}
 	return resp.State == "ENABLED"
@@ -289,7 +289,7 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 	var vms []VMInstanceInfo
 
 	for _, project := range projects {
-		if isServiceEnabled(project.Number, "compute.googleapis.com", credentials) {
+		if isServiceEnabled(project, "compute.googleapis.com", credentials) {
 			instancesClient, err := compute.NewInstancesRESTClient(ctx)
 
 			if err != nil {
@@ -330,7 +330,7 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 				}
 			}
 		} else {
-			fmt.Println("Compute not enabled for ", project.Name)
+			fmt.Println("Compute not enabled for ", project.Name, "("+project.ID+")")
 		}
 	}
 

@@ -340,19 +340,19 @@ func getAgentContainerCounts(profile string, regions []string) []AgentContainerC
 		//Running Fargate Tasks
 		numFuncs += 1
 		go func(r string) {
-			channel <- getFargateRunningTasksByRegion(*cfg, r)
+			channel <- getECSFargateRunningTasksByRegion(*cfg, r)
 		}(r)
 
 		//Running Fargate Containers
 		numFuncs += 1
 		go func(r string) {
-			channel <- getFargateRunningContainersByRegion(*cfg, r)
+			channel <- getECSFargateRunningContainersByRegion(*cfg, r)
 		}(r)
 
 		//Total Fargate Containers
 		numFuncs += 1
 		go func(r string) {
-			channel <- getFargateTotalContainersByRegion(*cfg, r)
+			channel <- getECSFargateTotalContainersByRegion(*cfg, r)
 		}(r)
 
 		numFuncs += 1
@@ -362,7 +362,7 @@ func getAgentContainerCounts(profile string, regions []string) []AgentContainerC
 
 		numFuncs += 1
 		go func(r string) {
-			channel <- getFargateActiveServicesByRegion(*cfg, r)
+			channel <- getECSFargateActiveServicesByRegion(*cfg, r)
 		}(r)
 	}
 
@@ -429,7 +429,7 @@ func getECSTaskDefinitionsByRegion(cfg aws.Config, region string) AgentContainer
 	}
 }
 
-func getFargateRunningTasksByRegion(cfg aws.Config, region string) AgentContainerCount {
+func getECSFargateRunningTasksByRegion(cfg aws.Config, region string) AgentContainerCount {
 	service := ecs.NewFromConfig(cfg)
 	output := ecs.NewListClustersPaginator(service, &ecs.ListClustersInput{})
 
@@ -437,7 +437,7 @@ func getFargateRunningTasksByRegion(cfg aws.Config, region string) AgentContaine
 	for output.HasMorePages() {
 		page, err := output.NextPage(context.TODO())
 		if err != nil {
-			log.Errorln("getFargateRunningTasksByRegion ListClusters ", region, err)
+			log.Errorln("getECSFargateRunningTasksByRegion ListClusters ", region, err)
 		} else {
 			for _, cluster := range page.ClusterArns {
 				output := ecs.NewListTasksPaginator(service, &ecs.ListTasksInput{
@@ -446,7 +446,7 @@ func getFargateRunningTasksByRegion(cfg aws.Config, region string) AgentContaine
 				for output.HasMorePages() {
 					page, err := output.NextPage(context.TODO())
 					if err != nil {
-						log.Errorln("getFargateRunningTasksByRegion ListTasks ", region, err)
+						log.Errorln("getECSFargateRunningTasksByRegion ListTasks ", region, err)
 					} else {
 						taskCount += len(page.TaskArns)
 					}
@@ -462,7 +462,7 @@ func getFargateRunningTasksByRegion(cfg aws.Config, region string) AgentContaine
 	}
 }
 
-func getFargateActiveServicesByRegion(cfg aws.Config, region string) AgentContainerCount {
+func getECSFargateActiveServicesByRegion(cfg aws.Config, region string) AgentContainerCount {
 	service := ecs.NewFromConfig(cfg)
 	output := ecs.NewListClustersPaginator(service, &ecs.ListClustersInput{})
 
@@ -470,14 +470,14 @@ func getFargateActiveServicesByRegion(cfg aws.Config, region string) AgentContai
 	for output.HasMorePages() {
 		page, err := output.NextPage(context.TODO())
 		if err != nil {
-			log.Errorln("getFargateActiveServicesByRegion ListClusters ", region, err)
+			log.Errorln("getECSFargateActiveServicesByRegion ListClusters ", region, err)
 		} else {
 			output, err := service.DescribeClusters(context.TODO(), &ecs.DescribeClustersInput{
 				Clusters: page.ClusterArns,
 			})
 
 			if err != nil {
-				log.Errorln("getFargateActiveServicesByRegion DescribeClusters ", region, err)
+				log.Errorln("getECSFargateActiveServicesByRegion DescribeClusters ", region, err)
 			} else {
 				for _, c := range output.Clusters {
 					count += int(c.ActiveServicesCount)
@@ -493,7 +493,7 @@ func getFargateActiveServicesByRegion(cfg aws.Config, region string) AgentContai
 	}
 }
 
-func getFargateRunningContainersByRegion(cfg aws.Config, region string) AgentContainerCount {
+func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) AgentContainerCount {
 	service := ecs.NewFromConfig(cfg)
 	output := ecs.NewListClustersPaginator(service, &ecs.ListClustersInput{})
 
@@ -501,7 +501,7 @@ func getFargateRunningContainersByRegion(cfg aws.Config, region string) AgentCon
 	for output.HasMorePages() {
 		page, err := output.NextPage(context.TODO())
 		if err != nil {
-			log.Errorln("getFargateRunningContainersByRegion ListClusters ", region, err)
+			log.Errorln("getECSFargateRunningContainersByRegion ListClusters ", region, err)
 		} else {
 			for _, cluster := range page.ClusterArns {
 				output := ecs.NewListTasksPaginator(service, &ecs.ListTasksInput{
@@ -510,7 +510,7 @@ func getFargateRunningContainersByRegion(cfg aws.Config, region string) AgentCon
 				for output.HasMorePages() {
 					page, err := output.NextPage(context.TODO())
 					if err != nil {
-						log.Errorln("getFargateRunningContainersByRegion ListTasks ", region, err)
+						log.Errorln("getECSFargateRunningContainersByRegion ListTasks ", region, err)
 					} else {
 						if len(page.TaskArns) > 0 {
 							outputDT, err := service.DescribeTasks(context.TODO(), &ecs.DescribeTasksInput{
@@ -518,7 +518,7 @@ func getFargateRunningContainersByRegion(cfg aws.Config, region string) AgentCon
 								Tasks:   page.TaskArns,
 							})
 							if err != nil {
-								log.Errorln("getFargateRunningContainersByRegion DescribeTasks ", region, err)
+								log.Errorln("getECSFargateRunningContainersByRegion DescribeTasks ", region, err)
 							} else {
 								for _, t := range outputDT.Tasks {
 									if t.LaunchType == ecsTypes.LaunchTypeFargate && ecsTypes.DesiredStatus(*t.LastStatus) == ecsTypes.DesiredStatusRunning {
@@ -544,7 +544,7 @@ func getFargateRunningContainersByRegion(cfg aws.Config, region string) AgentCon
 	}
 }
 
-func getFargateTotalContainersByRegion(cfg aws.Config, region string) AgentContainerCount {
+func getECSFargateTotalContainersByRegion(cfg aws.Config, region string) AgentContainerCount {
 	service := ecs.NewFromConfig(cfg)
 	output := ecs.NewListClustersPaginator(service, &ecs.ListClustersInput{})
 
@@ -552,7 +552,7 @@ func getFargateTotalContainersByRegion(cfg aws.Config, region string) AgentConta
 	for output.HasMorePages() {
 		page, err := output.NextPage(context.TODO())
 		if err != nil {
-			log.Errorln("getFargateTotalContainersByRegion ListClusters ", region, err)
+			log.Errorln("getECSFargateTotalContainersByRegion ListClusters ", region, err)
 		} else {
 			for _, cluster := range page.ClusterArns {
 				output := ecs.NewListTasksPaginator(service, &ecs.ListTasksInput{
@@ -561,7 +561,7 @@ func getFargateTotalContainersByRegion(cfg aws.Config, region string) AgentConta
 				for output.HasMorePages() {
 					page, err := output.NextPage(context.TODO())
 					if err != nil {
-						log.Errorln("getFargateTotalContainersByRegion ListTasks ", region, err)
+						log.Errorln("getECSFargateTotalContainersByRegion ListTasks ", region, err)
 					} else {
 						if len(page.TaskArns) > 0 {
 							outputDT, err := service.DescribeTasks(context.TODO(), &ecs.DescribeTasksInput{
@@ -569,7 +569,7 @@ func getFargateTotalContainersByRegion(cfg aws.Config, region string) AgentConta
 								Tasks:   page.TaskArns,
 							})
 							if err != nil {
-								log.Errorln("getFargateTotalContainersByRegion DescribeTasks ", region, err)
+								log.Errorln("getECSFargateTotalContainersByRegion DescribeTasks ", region, err)
 							} else {
 								for _, t := range outputDT.Tasks {
 									if t.LaunchType == ecsTypes.LaunchTypeFargate && ecsTypes.DesiredStatus(*t.LastStatus) == ecsTypes.DesiredStatusRunning {
