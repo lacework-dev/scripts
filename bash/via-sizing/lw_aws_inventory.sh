@@ -176,10 +176,10 @@ function textoutput {
   echo ""
   echo "Fargate Information"
   echo "===================="
-  echo "ECS Fargate Clusters:       $ECS_FARGATE_CLUSTERS"
-  echo "ECS Fargate Running Tasks:  $ECS_FARGATE_RUNNING_TASKS"
-  echo "ECS Fargate Container CPUs: $ECS_FARGATE_CPUS"
-  echo "ECS Fargate vCPUs:          $ECS_FARGATE_VCPUS"
+  echo "ECS Fargate Clusters:            $ECS_FARGATE_CLUSTERS"
+  echo "ECS Fargate Running Tasks:       $ECS_FARGATE_RUNNING_TASKS"
+  echo "ECS Fargate Container CPU Units: $ECS_FARGATE_CPUS"
+  echo "ECS Fargate vCPUs:               $ECS_FARGATE_VCPUS"
   echo ""
   echo "Lambda Information"
   echo "===================="
@@ -192,7 +192,7 @@ function textoutput {
   echo "Total vCPUs:       $TOTAL_VCPUS"
 }
 
-echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPUs", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
 
 
 for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
