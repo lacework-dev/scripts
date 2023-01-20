@@ -379,7 +379,7 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 											if ecsTypes.DesiredStatus(*c.LastStatus) == ecsTypes.DesiredStatusRunning {
 												vcpu, _ := strconv.ParseFloat(*t.Cpu, 32)
 												clusterPieces := strings.Split(cluster, ":")
-												println(clusterPieces)
+												//println(clusterPieces)
 												clusterInfo := ContainerClusterInfo{
 													Region:        region,
 													ContainerType: FARGATE_RUNNING_CONTAINERS,
@@ -531,7 +531,7 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 func getEC2InstancesByRegion(cfg aws.Config, region string) []EC2VMInfo {
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstancesPaginator(service, &ec2.DescribeInstancesInput{
-		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending"}}},
+		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending", "stopped"}}},
 	})
 
 	var instances []EC2VMInfo
