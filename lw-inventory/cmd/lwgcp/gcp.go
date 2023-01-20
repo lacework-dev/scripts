@@ -48,6 +48,14 @@ type OSCounts struct {
 	Linux   int
 }
 
+type ContainerClusterInfo struct {
+	Zone          string
+	ContainerType string
+	vCPU          float64
+	ClusterName   string
+	Project       string
+}
+
 func Run(projectsToIgnore []string, credentials string, debug bool) {
 	if debug {
 		log.SetLevel(log.DebugLevel)
@@ -56,6 +64,7 @@ func Run(projectsToIgnore []string, credentials string, debug bool) {
 	projects := getProjects(credentials, projectsToIgnore)
 	vms := getVMInstances(credentials, projects)
 	machineTypes := getMachinesTypes(credentials, projects, vms)
+	getCloudRunCounts
 
 	var vmsWithvCPU []VMInstanceInfo
 	for _, vm := range vms {
