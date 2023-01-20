@@ -64,7 +64,7 @@ func Run(projectsToIgnore []string, credentials string, debug bool) {
 	projects := getProjects(credentials, projectsToIgnore)
 	vms := getVMInstances(credentials, projects)
 	machineTypes := getMachinesTypes(credentials, projects, vms)
-	getCloudRunCounts
+	//getCloudRunCounts
 
 	var vmsWithvCPU []VMInstanceInfo
 	for _, vm := range vms {
