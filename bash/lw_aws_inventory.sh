@@ -32,7 +32,9 @@ shift $((OPTIND -1))
 
 # Set the initial counts to zero.
 ACCOUNTS=0
-EC2_INSTANCES=0
+EC2_INSTANCES_WINDOWS=0
+EC2_INSTANCES_LINUX=0
+EC2_INSTANCES_TOTAL=0
 RDS_INSTANCES=0
 REDSHIFT_CLUSTERS=0
 ELB_V1=0
@@ -51,8 +53,12 @@ function getRegions {
   aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
-function getInstances {
+function getInstancesTotal {
   aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
+}
+
+function getInstancesWindows {
+  aws --profile $profile ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters "Name=instance-state-name,Values=running,stopped" "Name=platform,Values=windows" --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getRDSInstances {
@@ -101,7 +107,9 @@ function calculateInventory {
   profile=$1
   accountid=$(getAccountId $profile)
 
-  accountEC2Instances=0
+  accountEC2InstancesTotal=0
+  accountEC2InstancesLinux=0
+  accountEC2InstancesWindows=0
   accountRDSInstances=0
   accountRedshiftClusters=0
   accountELBV1=0
@@ -115,9 +123,17 @@ function calculateInventory {
   for r in $(getRegions); do
     printf "$r "
 
-    instances=$(getInstances $r $profile)
-    EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
-    accountEC2Instances=$(($accountEC2Instances + $instances))
+    instancesTotal=$(getInstancesTotal $r $profile)
+    EC2_INSTANCES_TOTAL=$(($EC2_INSTANCES_TOTAL + $instancesTotal))
+    accountEC2InstancesTotal=$(($accountEC2InstancesTotal + $instancesTotal))
+
+    instancesWindows=$(getInstancesWindows $r $profile)
+    EC2_INSTANCES_WINDOWS=$(($EC2_INSTANCES_WINDOWS + $instancesWindows))
+    accountEC2InstancesWindows=$(($accountEC2InstancesWindows + $instancesWindows))
+
+    instancesLinux=$(($instancesTotal-$instancesWindows))
+    EC2_INSTANCES_LINUX=$(($EC2_INSTANCES_LINUX + $instancesLinux))
+    accountEC2InstancesLinux=$(($accountEC2InstancesLinux + $instancesLinux))
 
     rds=$(getRDSInstances $r $profile)
     RDS_INSTANCES=$(($RDS_INSTANCES + $rds))
@@ -153,14 +169,14 @@ function calculateInventory {
     accountLambdaFunctions=$(($LAMBDA_FNS + $lambdafns))
     if [ $LAMBDA_FNS -gt 0 ]; then LAMBDA_FNS_EXIST="Yes"; fi 
 
-    regiontotal=$(($instances + $rds + $redshift + $elbv1 + $elbv2 + $natgw))
+    regiontotal=$(($instancesTotal + $rds + $redshift + $elbv1 + $elbv2 + $natgw))
 
   done
-  accountTotal=$(($accountEC2Instances + $accountRDSInstances + $accountRedshiftClusters + $accountELBV1 + $accountELBV2 + $accountNATGateways))
+  accountTotal=$(($accountEC2InstancesTotal + $accountRDSInstances + $accountRedshiftClusters + $accountELBV1 + $accountELBV2 + $accountNATGateways))
 
-  echo , "$accountEC2Instances", "$accountRDSInstances", "$accountRedshiftClusters", "$accountELBV1", "$accountELBV2", "$accountNATGateways", "$accountTotal", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountLambdaFunctions"
+  echo , "$accountEC2InstancesTotal", "$accountRDSInstances", "$accountRedshiftClusters", "$accountELBV1", "$accountELBV2", "$accountNATGateways", "$accountTotal", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountLambdaFunctions"
 
-  TOTAL=$(($EC2_INSTANCES + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
+  TOTAL=$(($EC2_INSTANCES_TOTAL + $RDS_INSTANCES + $REDSHIFT_CLUSTERS + $ELB_V1 + $ELB_V2 + $NAT_GATEWAYS))
 }
 
 function textoutput {
@@ -169,7 +185,7 @@ function textoutput {
   echo ""
   echo "Accounts Analyzed: $ACCOUNTS"
   echo ""
-  echo "EC2 Instances:     $EC2_INSTANCES"
+  echo "EC2 Instances:     $EC2_INSTANCES_TOTAL (Linux: ${EC2_INSTANCES_LINUX}, Windows: ${EC2_INSTANCES_WINDOWS})"
   echo "RDS Instances:     $RDS_INSTANCES"
   echo "Redshift Clusters: $REDSHIFT_CLUSTERS"
   echo "v1 Load Balancers: $ELB_V1"
