@@ -12,7 +12,7 @@ LOAD_BALANCERS=0
 GATEWAYS=0
 
 function getSubscriptions {
-  az account list | jq -r '.[] | .id'
+  az account list --query "[?name != 'Access to Azure Active Directory']" | jq -r '.[] | .id'
 }
 
 function setSubscription {
