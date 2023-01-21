@@ -48,7 +48,7 @@ function getAccountId {
 }
 
 function getRegions {
-  aws --profile $profile ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
+  aws --profile $profile --region us-east-1 ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getInstances {
