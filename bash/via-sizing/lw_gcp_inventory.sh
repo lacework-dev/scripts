@@ -68,7 +68,7 @@ do
     machine_type=$(echo $machine_data | cut -d ' ' -f 3) # split and take third value (machine_type)
     type_vcpu_value=$(gcloud compute machine-types describe $machine_type --format=json | jq -r '.guestCpus') # get vCPU for machine type
 
-    GCE_VCPU=$(($GCE_VCPU + (($count * $type_vcpu_value)))) # increment total count
+    GCE_VCPU=$(($GCE_VCPU + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
   done
 
 
@@ -79,7 +79,4 @@ done
 echo "######################################################################"
 echo "Lacework inventory collection complete."
 echo ""
-#echo "GCE vCPU:   $GCE_VCPU"
-#echo "GKE Instances:   $GKE_VCPU"
-echo "===================="
 echo "Total vCPU: $(($GCE_VCPU))"
