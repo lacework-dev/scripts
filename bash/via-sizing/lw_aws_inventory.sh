@@ -6,20 +6,24 @@
 # Note:
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
-# 2. In order to scan a whole AWS organiation, the scripts assumes the presence of a OrganizationAccountAccessRole role in each account to perform the scan.
-# 3. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
+# 2. It's possible to specify a comma separated list of regions to scan to speed up the scan.
+# 2. In order to scan a whole AWS organiation, the scripts assumes the presence of a OrganizationAccountAccessRole
+# role in each account to perform the scan.
+# 3. The script takes a while to run in large accounts with many resources, provides details per 
+# account and a final summary of all resources found.
 
 
 AWS_PROFILE=""
 SCAN_ORGANIZATION=FALSE
 export AWS_MAX_ATTEMPTS=20
+REGIONS=""
 
 ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:o" opt; do
+while getopts ":p:or:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -27,12 +31,15 @@ while getopts ":p:o" opt; do
     o )
       SCAN_ORGANIZATION=TRUE
       ;;
+    r )
+      REGIONS=$(echo $OPTARG | sed "s/,/ /g")
+      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o] [-r regions]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o] [-r regions]" 1>&2
       exit 1
       ;;
   esac
@@ -133,7 +140,14 @@ function calculateInventory {
   accountTotalvCPUs=0
 
   printf "$account_name, $accountid,"
-  for r in $(getRegions); do
+  local regionsToScan=$REGIONS
+  if [ -z "$regionsToScan" ]
+  then
+      # Regions to scan not set, get list from AWS
+      regionsToScan=$(getRegions)
+  fi
+
+  for r in $regionsToScan; do
     printf " $r"
 
     instances=$(getEC2Instances $r $profile_string)
