@@ -3,6 +3,7 @@ package lwaws
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"math"
 	"strconv"
@@ -62,6 +63,7 @@ func Run(profiles []string, regions []string, debug bool) {
 
 	var totalvCPU int32
 	accountVMVCPUS := make(map[string]int32)
+	totalAccountvCPUS := make(map[string]int32)
 	accountContainerVCPUS := make(map[string]int32)
 	var totalVMOSCounts OSCounts
 
@@ -114,6 +116,7 @@ func Run(profiles []string, regions []string, debug bool) {
 		for account, vms := range vmAccountData {
 			for _, vm := range vms {
 				accountVMVCPUS[account] += vm.vCPU
+				totalAccountvCPUS[account] += vm.vCPU
 				totalvCPU += vm.vCPU
 			}
 		}
@@ -121,6 +124,7 @@ func Run(profiles []string, regions []string, debug bool) {
 		for account, vcpu := range containervCPUData {
 			vcpus := int32(math.Round(vcpu))
 			accountContainerVCPUS[account] += vcpus
+			totalAccountvCPUS[account] += vcpus
 			totalvCPU += vcpus
 		}
 
@@ -135,6 +139,7 @@ func Run(profiles []string, regions []string, debug bool) {
 		for account, vcpus := range accountContainerVCPUS {
 			fmt.Printf("Account Container vCPUs: %s - %d\n", account, vcpus)
 		}
+		fmt.Println("Lambda counts not available at this time")
 
 		fmt.Println("\nVM OS Counts")
 		fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
@@ -144,28 +149,20 @@ func Run(profiles []string, regions []string, debug bool) {
 		fmt.Println("----------------------------------------------")
 	}
 
-	//var totalvCPU int32
-	//accountVMVCPUS := make(map[string]int32)
-	//for account, vms := range accountData {
-	//	for _, vm := range vms {
-	//		accountVMVCPUS[account] += vm.vCPU
-	//		totalvCPU += vm.vCPU
-	//	}
-	//}
-
 	fmt.Println("----------------------------------------------")
 	fmt.Printf("Total AWS vCPUs %d\n", totalvCPU)
 
 	fmt.Println("\nAccount Breakdown")
-	for account, vcpus := range accountVMVCPUS {
+	for account, vcpus := range totalAccountvCPUS {
 		fmt.Printf("Account: %s - %d\n", account, vcpus)
 	}
+	fmt.Println("Lambda counts not available at this time")
 
 	fmt.Println("\nVM OS Counts")
 	fmt.Printf("Linux VMs %d\n", totalVMOSCounts.Linux)
 	fmt.Printf("Windows VMs %d\n", totalVMOSCounts.Windows)
 
-	fmt.Println("\nNumber of AWS Accounts inventoried:", len(accountVMVCPUS))
+	fmt.Println("\nNumber of AWS Accounts Inventoried:", len(accountVMVCPUS))
 	fmt.Println("----------------------------------------------")
 }
 
@@ -173,7 +170,10 @@ func getSession(profile string, region string) *aws.Config {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(region),
 		config.WithSharedConfigProfile(profile),
-		config.WithDefaultsMode(aws.DefaultsModeInRegion),
+		//config.WithDefaultsMode(aws.DefaultsModeInRegion),
+		config.WithRetryer(func() aws.Retryer {
+			return retry.AddWithMaxAttempts(retry.NewStandard(), 1)
+		}),
 	)
 	if err != nil {
 		log.Errorln("Error connecting to AWS", err)
@@ -218,6 +218,9 @@ func getInstanceTypesByRegion(cfg aws.Config, region string) []InstanceType {
 		page, err := output.NextPage(context.TODO())
 		if err != nil {
 			log.Errorln("getInstanceTypes NewDescribeInstanceTypesPaginator ", region, err)
+			if strings.Contains(err.Error(), "credentials") {
+				println("auth issue")
+			}
 		} else {
 			for _, it := range page.InstanceTypes {
 				//fmt.Println(it.InstanceType, it.VCpuInfo.DefaultVCpus, region)
@@ -353,7 +356,6 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 		if err != nil {
 			log.Errorln("getECSFargateRunningContainersByRegion ListClusters ", region, err)
 		} else {
-
 			for _, cluster := range page.ClusterArns {
 				output := ecs.NewListTasksPaginator(service, &ecs.ListTasksInput{
 					Cluster: &cluster,

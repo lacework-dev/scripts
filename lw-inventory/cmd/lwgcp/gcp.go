@@ -81,6 +81,7 @@ func Run(projectsToIgnore []string, credentials string, debug bool) {
 
 	for _, project := range projects {
 		fmt.Println("Project:", project.Name)
+		fmt.Println("Cloud Run counts not available at this time")
 		var vcpus int32
 		for _, vm := range vmsWithvCPU {
 			if vm.Project == project.Name {
@@ -176,7 +177,7 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 				instances := pair.Value.Instances
 				if len(instances) > 0 {
 					for _, instance := range instances {
-						if instance.GetStatus() == "RUNNING" {
+						if instance.GetStatus() == "RUNNING" || instance.GetStatus() == "STOPPED" {
 							parts := strings.Split(*instance.MachineType, "/")
 							instanceType := parts[10]
 							zone := parts[8]

@@ -71,8 +71,8 @@ func Run(subscriptionsToIgnore []string, debug bool) {
 				}
 			}
 
-			fmt.Println("Standard Agents", len(standardAgentsWithvCPU))
-			fmt.Println("Enterprise Agents", len(enterpriseAgentsWithvCPU))
+			fmt.Println("VM vCPU Counts", len(standardAgentsWithvCPU))
+			fmt.Println("Container vCPU Counts", len(enterpriseAgentsWithvCPU))
 
 			for _, vm := range standardAgentsWithvCPU {
 				if vm.OS == "Linux" {
@@ -162,13 +162,13 @@ func getVMSizesByLocation(location string) []MachineType {
 }
 
 func getStandardAgents() []VMInfo {
-	fmt.Println("Gathering Standard Agent Count")
+	fmt.Println("Gathering VM vCPU Count")
 	vmCount := getVMs()
 	return vmCount
 }
 
 func getEntepriseAgents() []VMInfo {
-	fmt.Println("Gathering Enterprise Agent Count")
+	fmt.Println("Gathering AKS vCPU Count")
 	nodes := getAKSNodes()
 	return nodes
 }
