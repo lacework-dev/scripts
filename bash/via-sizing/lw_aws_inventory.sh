@@ -2,28 +2,37 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
-# You can specify a profile with the -p flag
+# You can specify a profile with the -p flag and to scan an AWS organization using the -o flag
 # Note:
 # 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
 # there are no spaces between accounts in the list
-# 2. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
+# 2. In order to scan a whole AWS organiation, the scripts assumes the presence of a OrganizationAccountAccessRole role in each account to perform the scan.
+# 3. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
 
 
 AWS_PROFILE=""
+SCAN_ORGANIZATION=FALSE
 export AWS_MAX_ATTEMPTS=20
 
+ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
+
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:" opt; do
+while getopts ":p:o" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
       ;;
+    o )
+      SCAN_ORGANIZATION=TRUE
+      ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o]" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
+      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o]" 1>&2
       exit 1
       ;;
   esac
@@ -32,6 +41,7 @@ shift $((OPTIND -1))
 
 # Set the initial counts to zero.
 ACCOUNTS=0
+ORGANIZATIONS=0
 EC2_INSTANCES=0
 EC2_INSTANCE_VCPU=0
 ECS_FARGATE_CLUSTERS=0
@@ -110,7 +120,7 @@ function getLambdaFunctionMemory {
 }
 
 function calculateInventory {
-  profile=$1
+  account_name=$1
   profile_string=$2
   accountid=$(getAccountId "profile_string")
   accountEC2Instances=0
@@ -122,7 +132,7 @@ function calculateInventory {
   accountLambdaMemory=0
   accountTotalvCPUs=0
 
-  printf "$profile, $accountid,"
+  printf "$account_name, $accountid,"
   for r in $(getRegions); do
     printf " $r"
 
@@ -167,7 +177,8 @@ function textoutput {
   echo "######################################################################"
   echo "Lacework inventory collection complete."
   echo ""
-  echo "Accounts Analyzed: $ACCOUNTS"
+  echo "Organizations Analyzed: $ORGANIZATIONS"
+  echo "Accounts Analyzed:      $ACCOUNTS"
   echo ""
   echo "EC2 Information"
   echo "===================="
@@ -195,19 +206,54 @@ function textoutput {
 echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
 
 
-for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
-do
-    # Profile set
-    PROFILE_STRING="--profile $PROFILE"
-    ACCOUNTS=$(($ACCOUNTS + 1))
-    calculateInventory "$PROFILE" "$PROFILE_STRING"
-done
+function doAnalyzeOrganization {
+    local profile_string=$1
+    local accounts=$(aws $profile_string organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
+    for account in $(echo $accounts | jq -r '.Id')
+    do
+        ACCOUNTS=$(($ACCOUNTS + 1))
+        local account_name=$(echo $accounts | jq -c | grep $account | jq -r '.Name')
+        local account_credentials=$(aws $profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
 
-if [ -z "$PROFILE" ]
+        export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
+        export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
+        export AWS_SESSION_TOKEN=$(echo $account_credentials | jq -r '.Credentials.SessionToken')
+        calculateInventory "$account_name" ""
+        export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
+        export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
+        export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+    done
+}
+
+if [ $SCAN_ORGANIZATION = "TRUE" ]
 then
-    # No profile argument, run AWS CLI default
-    ACCOUNTS=1
-    calculateInventory "" ""
+    for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+    do
+        ORGANIZATIONS=$(($ORGANIZATIONS + 1))
+        PROFILE_STRING="--profile $PROFILE"
+        doAnalyzeOrganization "$PROFILE_STRING"
+    done
+
+    if [ -z "$PROFILE" ]
+    then
+        ORGANIZATIONS=1
+        doAnalyzeOrganization ""
+    fi
+else
+    for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+    do
+        # Profile set
+        PROFILE_STRING="--profile $PROFILE"
+        ACCOUNTS=$(($ACCOUNTS + 1))
+        calculateInventory "$PROFILE" "$PROFILE_STRING"
+    done
+
+    if [ -z "$PROFILE" ]
+    then
+        # No profile argument, run AWS CLI default
+        ACCOUNTS=1
+        calculateInventory "" ""
+    fi
 fi
 
 ECS_FARGATE_VCPUS=$(($ECS_FARGATE_CPUS / 1024))
