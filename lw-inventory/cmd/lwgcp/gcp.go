@@ -177,7 +177,7 @@ func getVMInstances(credentials string, projects []ProjectInfo) []VMInstanceInfo
 				instances := pair.Value.Instances
 				if len(instances) > 0 {
 					for _, instance := range instances {
-						if instance.GetStatus() == "RUNNING" || instance.GetStatus() == "STOPPED" {
+						if instance.GetStatus() == "RUNNING" {
 							parts := strings.Split(*instance.MachineType, "/")
 							instanceType := parts[10]
 							zone := parts[8]

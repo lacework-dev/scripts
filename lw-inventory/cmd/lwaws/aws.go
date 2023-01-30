@@ -533,7 +533,7 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 func getEC2InstancesByRegion(cfg aws.Config, region string) []EC2VMInfo {
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstancesPaginator(service, &ec2.DescribeInstancesInput{
-		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending", "stopped"}}},
+		Filters: []ec2Types.Filter{{Name: aws.String("instance-state-name"), Values: []string{"running", "pending"}}},
 	})
 
 	var instances []EC2VMInfo
