@@ -67,11 +67,11 @@ function getRegions {
 }
 
 function getEC2Instances {
-  aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq 'flatten | length'
+  aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-paginate | jq 'flatten | length'
 }
 
 function getEC2InstacevCPUs {
-  cpucounts=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running,stopped --region $r --output json --no-paginate | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
+  cpucounts=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running --region $r --output json --no-paginate | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
   returncount=0
   for cpucount in $cpucounts; do
     returncount=$(($returncount + $cpucount))
@@ -201,7 +201,7 @@ function textoutput {
   echo ""
   echo "Fargate Information"
   echo "===================="
-  echo "ECS Fargate Clusters:            $ECS_FARGATE_CLUSTERS"
+  echo "ECS Clusters:                    $ECS_FARGATE_CLUSTERS"
   echo "ECS Fargate Running Tasks:       $ECS_FARGATE_RUNNING_TASKS"
   echo "ECS Fargate Container CPU Units: $ECS_FARGATE_CPUS"
   echo "ECS Fargate vCPUs:               $ECS_FARGATE_VCPUS"
