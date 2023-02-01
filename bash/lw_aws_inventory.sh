@@ -225,13 +225,13 @@ echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Farg
 
 
 function doAnalyzeOrganization {
-    local profile_string=$1
-    local accounts=$(aws $profile_string organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
+    local org_profile_string=$1
+    local accounts=$(aws $org_profile_string organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
     for account in $(echo $accounts | jq -r '.Id')
     do
         ACCOUNTS=$(($ACCOUNTS + 1))
         local account_name=$(echo $accounts | jq -c | grep $account | jq -r '.Name')
-        local account_credentials=$(aws $profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
+        local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
 
         export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
         export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
