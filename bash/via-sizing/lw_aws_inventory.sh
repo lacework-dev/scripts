@@ -214,7 +214,11 @@ function textoutput {
   echo ""
   echo "License Summary"
   echo "===================="
-  echo "Total vCPUs:       $TOTAL_VCPUS"
+  echo "  EC2 vCPUs:            $EC2_INSTANCE_VCPU"
+  echo "+ ECS Fargate vCPUs:    $ECS_FARGATE_VCPUS"
+  echo "+ Lambda License vCPUs: $LAMBDA_VCPUS"
+  echo "----------------------------"
+  echo "= Total vCPUs:          $TOTAL_VCPUS"
 }
 
 echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
