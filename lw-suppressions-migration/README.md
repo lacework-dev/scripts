@@ -12,11 +12,14 @@ This tool is provided AS-IS and without any warranty nor expectations of support
 - [Lacework Python SDK](https://github.com/lacework/python-sdk): `pip3 install laceworksdk`
 
 ### Working with multiple lacework CLI profiles
-Before (and after) running this tool, ensure your active (default) Lacework profile is the one you want to use for this migration. The source and destination of the migration has to be the same account, do not use it by reading Suppressions from account A and then execute the script output on Account B
+Before (and after) running this tool, ensure which Lacework profile is the one you want to use for this migration. The tool supports "profiles", but the source and destination of the migration has to be the same account.
+IMPORTANT do not use it by reading Suppressions from account A and then execute the script output on Account B
 
 ## Usage
 
-`python3 migrate.py`
+`python3 migrate.py ` 
+
+`python3 migrate.py -p profileName`
 
 or
 
@@ -27,6 +30,7 @@ if you want to review the output script as a text file instead of console output
 For more verbose output, use
 `python3 migrate.py -v` 
 
+You can see the list of Profiles in your CLI configuration file `~/.lacework.toml`
 
 
 ## Output Sample
@@ -59,7 +63,7 @@ Users are strongly encoureged to review the Output script (list of Lacework CLI 
 If you see something like this
 ```
 ERROR unable to send the request: 
-  [POST] https://lwintmarcgarcia.lacework.net/api/v2/Exceptions?policyId=lacework-global-41
+  [POST] https://yourenv.lacework.net/api/v2/Exceptions?policyId=lacework-global-41
   [400] fieldKey: regionNames is not applicable to policy lacework-global-41
 ```
 

@@ -52,13 +52,6 @@ function hasStackSetExecutionRole () {
   aws iam list-roles | jq -r '.Roles[] | select(.RoleName == "AWSCloudFormationStackSetExecutionRole")'
 }
 
-function hasSelfManagedRoles() {
-  if [[ ! -z $(hasStackSetAdministrationRole) ]] && [[ ! -z $(hasStackSetExecutionRole) ]]
-  then
-    echo "Self Managed Roles Exist"
-  fi
-}
-
 function getEnabledRegions () {
   aws ec2 describe-regions --all-regions | jq -r '.Regions[] | select(.OptInStatus != "not-opted-in") | .RegionName'
 }
@@ -102,7 +95,8 @@ function printOutput () {
   echo "    Lacework Agentless Preflight Results"
   echo "--------------------------------------------"
   echo ""
-  echo "Deploy Self Managed Permissions? $RESULT_SELF_MANAGED_DEPLOY"
+  echo "Deploy CloudFormation StackSet Administration Role? $RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE"
+  echo "Deploy CloudFormation StackSet Execution Role? $RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE"
   echo "Deploy ECS Service Linked Role?  $RESULT_ECS_ROLE_DEPLOY"
   echo ""
   echo "Recommended Deployment Regions:"
@@ -110,13 +104,22 @@ function printOutput () {
   echo "********************************************"
 }
 
-result=$(hasSelfManagedRoles)
+result=$(hasStackSetAdministrationRole)
 if [[ ! -z $result ]]; then
-  echo "${OK}  Cloudformation StackSet 'Self-Managed' roles exist."
-  RESULT_SELF_MANAGED_DEPLOY="No"
+  echo "${OK}  Cloudformation StackSet Administration role exists."
+  RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE="No"
 else
-  echo "${WARN}  Cloudformation StackSet 'Self-Managed' roles do not exist."
-  RESULT_SELF_MANAGED_DEPLOY="Yes"
+  echo "${WARN}  Cloudformation StackSet Administration role does not exist."
+  RESULT_CLOUDFORMATION_STACK_SET_ADMINISTRATION_ROLE="Yes"
+fi
+
+result=$(hasStackSetExecutionRole)
+if [[ ! -z $result ]]; then
+  echo "${OK}  Cloudformation StackSet Execution role exists."
+  RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE="No"
+else
+  echo "${WARN}  Cloudformation StackSet Execution role does not exist."
+  RESULT_CLOUDFORMATION_STACK_SET_EXECUTION_ROLE="Yes"
 fi
 
 result=$(hasEcsRole)
