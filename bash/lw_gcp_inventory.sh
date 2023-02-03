@@ -35,8 +35,6 @@ shift $((OPTIND -1))
 TOTAL_GCE_VCPU=0
 TOTAL_GCE_VM_COUNT=0
 
-
-
 function retrieveConsumptionData {
   local scope=$1
   local scopeDescription=$2
@@ -48,7 +46,10 @@ function retrieveConsumptionData {
   local instances=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Instance" --format=json)
 
   # get a map of `{count} {machine_type}` for the scope
-  local machine_count_map=$(echo $instances | jq -r '.[] | .additionalAttributes.machineType + " " + .location' | sort | uniq -c )
+  local machine_count_map=$(echo $instances | jq -r '.[] | .additionalAttributes.machineType + " " + .location + " " + .project' | sort | uniq -c )
+  
+  #Read project information that's within scope for this mapping
+  local projects=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Project" --format=json)
 
   # make the for loop split on newline vs. space
   IFS=$'\n' 
@@ -58,13 +59,15 @@ function retrieveConsumptionData {
     local machine_data=$(echo $machine_data | tr -s ' ') # trim all but one leading space
     local count=$(echo $machine_data | cut -d ' ' -f 2)  # split and take the second value (count)
     local machine_type=$(echo $machine_data | cut -d ' ' -f 3) # split and take third value (machine_type)
-    local location=$(echo $machine_data | cut -d ' ' -f 4) # split and take third value (location)
-    local type_vcpu_value=$(gcloud compute machine-types describe $machine_type --zone=$location --format=json | jq -r '.guestCpus') # get vCPU for machine type
+    local location=$(echo $machine_data | cut -d ' ' -f 4) # split and take fourth value (location)
+    local projectId=$(echo $machine_data | cut -d ' ' -f 5) # split and take fifth value (project)
+    local project=$(echo $projects | jq -r --arg projectId "$projectId" '.[] | select(.project==$projectId) | .displayName')
+    local type_vcpu_value=$(gcloud compute machine-types describe $machine_type --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
 
-    TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
     TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
-    scopeVCPUs=$(($scopeVCPUs + $count)) # increment total count, including Standard GKE
-    scopeVmCount=$(($scopeVmCount + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
+    TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
+    scopeVCPUs=$(($scopeVCPUs + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
+    scopeVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
   done
 
   echo $scopeDescription
@@ -78,7 +81,7 @@ then
   echo Folders set
   for FOLDER in $(echo $FOLDERS | sed "s/,/ /g")
   do
-    #echo $ORGANIZATION
+    #echo $FOLDER
     retrieveConsumptionData "folders/$FOLDER" "Folder: $FOLDER"
   done
 elif [ -n "$ORGANIZATIONS" ]
@@ -117,7 +120,6 @@ else
       retrieveConsumptionData "projects/$foundProject" "Project: $foundProject"
     done
   fi
-
 fi
 
 echo "Lacework inventory collection complete."
