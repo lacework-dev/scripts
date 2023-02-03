@@ -86,7 +86,7 @@ if [[ ! -z $VM_LINES ]]
 then
   while read i; do
     # lookup the vCPU in the map, extract the value
-    vCPU=$(grep $i ./tmp_map | cut -d: -f2)
+    vCPU=$(grep $i: ./tmp_map | cut -d: -f2)
     if [[ ! -z $vCPU ]]
     then
       AZURE_VMS_VCPU=$(($AZURE_VMS_VCPU + $vCPU))
@@ -123,7 +123,7 @@ then
     sku=$(echo $i | cut -d: -f1)
     capacity=$(echo $i | cut -d: -f2)
 
-    vCPU=$(grep $sku ./tmp_map | cut -d: -f2)
+    vCPU=$(grep $sku: ./tmp_map | cut -d: -f2)
     if [[ ! -z $vCPU ]]
     then
       total_vCPU=$(($vCPU * $capacity))
