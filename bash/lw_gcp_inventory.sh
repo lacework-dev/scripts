@@ -37,10 +37,8 @@ TOTAL_GCE_VM_COUNT=0
 
 function retrieveConsumptionData {
   local scope=$1
-  local scopeDescription=$2
   local scopeVCPUs=0
   local scopeVmCount=0
-  #echo retrieveConsumptionData $1 $2
 
   # get all instances within the scope
   local instances=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Instance" --format=json)
@@ -70,58 +68,55 @@ function retrieveConsumptionData {
     scopeVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
   done
 
-  echo $scopeDescription
-  echo "Number of VMs: $scopeVmCount"
-  echo "vCPUs:         $scopeVCPUs"
-  echo "######################################################################"
+  echo "\"$scope\", $scopeVmCount, $scopeVCPUs"
 }
 
 if [ -n "$FOLDERS" ]
 then
-  echo Folders set
+  echo \"Folder\", \"VM Count\", \"vCPUs\"
   for FOLDER in $(echo $FOLDERS | sed "s/,/ /g")
   do
-    #echo $FOLDER
-    retrieveConsumptionData "folders/$FOLDER" "Folder: $FOLDER"
+    retrieveConsumptionData "folders/$FOLDER"
   done
 elif [ -n "$ORGANIZATIONS" ]
 then
-  echo Organizations set
+  echo \"Organization\", \"VM Count\", \"vCPUs\"
   for ORGANIZATION in $(echo $ORGANIZATIONS | sed "s/,/ /g")
   do
-    #echo $ORGANIZATION
-    retrieveConsumptionData "organizations/$ORGANIZATION" "Organization: $ORGANIZATION"
+    retrieveConsumptionData "organizations/$ORGANIZATION"
   done
 elif [ -n "$PROJECTS" ]
 then
-  #echo Projects set
+  echo \"Project\", \"VM Count\", \"vCPUs\"
   for PROJECT in $(echo $PROJECTS | sed "s/,/ /g")
   do
-    #echo $PROJECT
-    retrieveConsumptionData "projects/$PROJECT" "Project: $PROJECT"
+    retrieveConsumptionData "projects/$PROJECT"
   done
 else
 
   foundOrganizations=$(gcloud organizations list --format json | jq -r '.[].name')
   if [ -n "$foundOrganizations" ]
   then
-    #echo Found $foundOrganizations
+    echo \"Organization\", \"VM Count\", \"vCPUs\"
     for foundOrganization in $foundOrganizations;
     do
-      #echo $foundOrganization
-      retrieveConsumptionData "organizations/$foundOrganization" "Organization: $foundOrganization"
+      retrieveConsumptionData "organizations/$foundOrganization"
     done
   else
     foundProjects=$(gcloud projects list --format json | jq -r ".[] | .projectId")
-    #echo Found $foundProjects
+    echo \"Project\", \"VM Count\", \"vCPUs\"
     for foundProject in $foundProjects;
     do
-      #echo $foundProject
-      retrieveConsumptionData "projects/$foundProject" "Project: $foundProject"
+      retrieveConsumptionData "projects/$foundProject"
     done
   fi
 fi
 
+
+echo "##########################################"
 echo "Lacework inventory collection complete."
-echo "Number of VMs: $TOTAL_GCE_VM_COUNT"
-echo "vCPUs:         $TOTAL_GCE_VCPU"
+echo ""
+echo "License Summary:"
+echo "================================================"
+echo "Number of VMs, including standard GKE: $TOTAL_GCE_VM_COUNT"
+echo "vCPUs:                                 $TOTAL_GCE_VCPU"
