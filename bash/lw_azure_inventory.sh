@@ -117,17 +117,7 @@ function runSubscriptionAnalysis {
   AZURE_VMSS_VM_COUNT=$(($AZURE_VMSS_VM_COUNT + $subscriptionVmssVmCount))
   AZURE_VMSS_COUNT=$(($AZURE_VMSS_COUNT + $subscriptionVmssCount))
 
-  echo "------------------------------------------"
-  echo "Subscription ID:          $subscriptionId"
-  echo "Subscription Name:        $subscriptionName"
-  echo "VMs:                      $subscriptionVmCount"
-  echo "VM vCPUs:                 $subscriptionVmVcpu"
-  echo "VM Scale Sets:            $subscriptionVmssCount"
-  echo "VM Scale Set Instances:   $subscriptionVmssVmCount"
-  echo "VM Scale Set vCPUs:       $subscriptionVmssVcpu"
-  echo ""
-  echo "Total Subscription vCPUs: $(($subscriptionVmVcpu + $subscriptionVmssVcpu))"
-  echo ""
+  echo "\"$subscriptionId\", \"$subscriptionName\", $subscriptionVmCount, $subscriptionVmVcpu, $subscriptionVmssCount, $subscriptionVmssVmCount, $subscriptionVmssVcpu, $(($subscriptionVmVcpu + $subscriptionVmssVcpu))"
 }
 
 function runAnalysis {
@@ -141,6 +131,8 @@ function runAnalysis {
   local vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)" $scope)
 
   local actualSubscriptionIds=$(echo $vms | jq -r '.data[] | .subscriptionId' | sort | uniq)
+
+  echo '"Subscription ID", "Subscription Name", "VM Instances", "VM vCPUs", "VM Scale Sets", "VM Scale Set Instances", "VM Scale Set vCPUs", "Total Subscription vCPUs"'
 
   #First analyze data for all subscriptions we didn't expect to find
   for actualSubscriptionId in $actualSubscriptionIds
@@ -171,14 +163,23 @@ else
   runAnalysis ""
 fi
 
-
-echo "=========================================="
-echo "Summary"
-echo "Total VMs:                 $AZURE_VMS_COUNT"
-echo "Total VM vCPUS:            $AZURE_VMS_VCPU"
+echo "##########################################"
+echo "Lacework inventory collection complete."
 echo ""
-echo "Total VM Scale Sets:       $AZURE_VMSS_COUNT"
-echo "Total VM Scale Instances:  $AZURE_VMSS_VM_COUNT"
-echo "Total VM Scale vCPUs:      $AZURE_VMSS_VCPU"
-echo "------------------------------------------"
-echo "Total Number of vCPUs:     $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
+echo "VM Summary:"
+echo "==============================="
+echo "VM Instances:     $AZURE_VMS_COUNT"
+echo "VM vCPUS:         $AZURE_VMS_VCPU"
+echo ""
+echo "VM Scale Set Summary:"
+echo "==============================="
+echo "VM Scale Sets:          $AZURE_VMSS_COUNT"
+echo "VM Scale Set Instances: $AZURE_VMSS_VM_COUNT"
+echo "VM Scale Set vCPUs:     $AZURE_VMSS_VCPU"
+echo ""
+echo "License Summary"
+echo "==============================="
+echo "  VM vCPUS:             $AZURE_VMS_VCPU"
+echo "+ VM Scale Set vCPUs:   $AZURE_VMSS_VCPU"
+echo "-------------------------------"
+echo "Total vCPUs:            $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
