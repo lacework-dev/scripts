@@ -45,8 +45,8 @@ function retrieveConsumptionData {
   # get all instances within the scope
   local instances=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Instance" --format=json)
 
-  # get a map of `{count} {machine_type}` for the scope
-  local machine_count_map=$(echo $instances | jq -r '.[] | .additionalAttributes.machineType + " " + .location + " " + .project' | sort | uniq -c )
+  # get a map of `{count} {machine_type}` for the scope that are not terminated / stopped
+  local machine_count_map=$(echo $instances | jq -r '.[] | select(.state != ("TERMINATED")) | .additionalAttributes.machineType + " " + .location + " " + .project' | sort | uniq -c )
   
   #Read project information that's within scope for this mapping
   local projects=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Project" --format=json)
