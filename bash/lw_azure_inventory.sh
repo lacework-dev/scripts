@@ -50,7 +50,10 @@ trap removeMap EXIT
 
 # Set the initial counts to zero.
 AZURE_VMS_VCPU=0
+AZURE_VMS_COUNT=0
 AZURE_VMSS_VCPU=0
+AZURE_VMSS_VM_COUNT=0
+AZURE_VMSS_COUNT=0
 
 installResourceGraphIfNotPresent
 
@@ -61,80 +64,122 @@ az vm list-skus --resource-type virtualmachines |\
 echo "Map built successfully."
 ###################################
 
-# No need to iterate subscriptions when using Azure Resource Graph -- this will populate for all subscriptions the user has access to!
+function runSubscriptionAnalysis {
+  local subscriptionId=$1
+  local subscriptionName=$2
+  local vms=$3
+  local vmss=$4
+  local subscriptionVmVcpu=0
+  local subscriptionVmCount=0
+  local subscriptionVmssVcpu=0
+  local subscriptionVmssVmCount=0
+  local subscriptionVmssCount=0
 
-# get VM details
-echo "Running Az Resource Graph Query for VMs..."
+  
+  # tally up VM vCPU 
+  local VM_LINES=$(echo $vms | jq -r --arg subscriptionId "$subscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | select(.powerState=="PowerState/running") | .sku')
+  if [[ ! -z $VM_LINES ]]
+  then
+    while read i; do
+      # lookup the vCPU in the map, extract the value
+      local vCPU=$(grep $i: ./tmp_map | cut -d: -f2)
+      if [[ ! -z $vCPU ]]
+      then
+        subscriptionVmCount=$(($subscriptionVmCount + 1))
+        subscriptionVmVcpu=$(($subscriptionVmVcpu + $vCPU))
+      fi
+    done <<< "$VM_LINES"
+  fi
+
+  # tally up VMSS vCPU -- using a here string to populate the while loop
+  local VMSS_LINES=$(echo $vmss | jq -r --arg subscriptionId "$subscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | .sku+":"+(.capacity|tostring)')
+  if [[ ! -z $VMSS_LINES ]]
+  then
+    while read i; do
+      local sku=$(echo $i | cut -d: -f1)
+      local capacity=$(echo $i | cut -d: -f2)
+
+      local vCPU=$(grep $sku: ./tmp_map | cut -d: -f2)
+      if [[ ! -z $vCPU ]]
+      then
+        local total_vCPU=$(($vCPU * $capacity))
+
+        subscriptionVmssVcpu=$(($subscriptionVmssVcpu + $total_vCPU))
+        subscriptionVmssVmCount=$(($subscriptionVmssVmCount + $capacity))
+        subscriptionVmssCount=$(($subscriptionVmssCount + 1))
+      fi
+    done <<< "$VMSS_LINES"
+  fi
+
+  AZURE_VMS_COUNT=$(($AZURE_VMS_COUNT + $subscriptionVmCount))
+  AZURE_VMS_VCPU=$(($AZURE_VMS_VCPU + $subscriptionVmVcpu))
+  AZURE_VMSS_VCPU=$(($AZURE_VMSS_VCPU + $subscriptionVmssVcpu))
+  AZURE_VMSS_VM_COUNT=$(($AZURE_VMSS_VM_COUNT + $subscriptionVmssVmCount))
+  AZURE_VMSS_COUNT=$(($AZURE_VMSS_COUNT + $subscriptionVmssCount))
+
+  echo "\"$subscriptionId\", \"$subscriptionName\", $subscriptionVmCount, $subscriptionVmVcpu, $subscriptionVmssCount, $subscriptionVmssVmCount, $subscriptionVmssVcpu, $(($subscriptionVmVcpu + $subscriptionVmssVcpu))"
+}
+
+function runAnalysis {
+  local scope=$1
+  echo Load subscriptions
+  local expectedSubscriptions=$(az graph query -q "resourcecontainers | where type == 'microsoft.resources/subscriptions' | project name, subscriptionId" $scope)
+  local expectedSubscriptionIds=$(echo $expectedSubscriptions | jq -r '.data[] | .subscriptionId' | sort)
+  echo Load VMs
+  local vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize, powerState=properties.extended.instanceView.powerState.code" $scope)
+  echo Load VMSS
+  local vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)" $scope)
+
+  local actualSubscriptionIds=$(echo $vms | jq -r '.data[] | .subscriptionId' | sort | uniq)
+
+  echo '"Subscription ID", "Subscription Name", "VM Instances", "VM vCPUs", "VM Scale Sets", "VM Scale Set Instances", "VM Scale Set vCPUs", "Total Subscription vCPUs"'
+
+  #First analyze data for all subscriptions we didn't expect to find
+  for actualSubscriptionId in $actualSubscriptionIds
+  do
+    local foundSubscriptionId=$(echo $expectedSubscriptions | jq -r  --arg subscriptionId "$actualSubscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | .subscriptionId')
+    if [ "$actualSubscriptionId" != "$foundSubscriptionId" ]; then
+      #echo $actualSubscriptionId not found, dig deeper!
+      runSubscriptionAnalysis $actualSubscriptionId "" "$vms" "$vmss"
+    fi
+  done
+
+  # Go through all results, sorted by all subscriptions we'd expect to find
+  for expectedSubscriptionId in $expectedSubscriptionIds
+  do
+    local subscriptionName=$(echo $expectedSubscriptions | jq -r  --arg subscriptionId "$expectedSubscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | .name')
+    #echo $expectedSubscriptionId: $subscriptionName
+    runSubscriptionAnalysis $expectedSubscriptionId "$subscriptionName" "$vms" "$vmss"
+  done
+}
+
+
 # Management group takes precedence...partial scopes ALLOWED
 if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
-  # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
-  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
-        --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
+  runAnalysis "--management-groups ${MANAGEMENT_GROUP//,/ }"
 elif [[ ! -z "$SUBSCRIPTION" ]]; then
-  # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
-  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize"\
-        --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
+  runAnalysis "--subscriptions ${SUBSCRIPTION//,/ }"
 else
-  vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize")
+  runAnalysis ""
 fi
-echo "VM data retrieved."
 
-
-# tally up VM vCPU 
-VM_LINES=$(echo $vms | jq -r '.data[] | .sku')
-if [[ ! -z $VM_LINES ]]
-then
-  while read i; do
-    # lookup the vCPU in the map, extract the value
-    vCPU=$(grep $i: ./tmp_map | cut -d: -f2)
-    if [[ ! -z $vCPU ]]
-    then
-      AZURE_VMS_VCPU=$(($AZURE_VMS_VCPU + $vCPU))
-    fi
-  done <<< "$VM_LINES"
-fi
-echo "Azure VMs vCPU:         $AZURE_VMS_VCPU"
+echo "##########################################"
+echo "Lacework inventory collection complete."
 echo ""
-###################################
-
-
-#TODO: future state, support a flag to filter on subscription or management group scope
-# get VMSS details
-echo "Running Az Resource Graph Query for VMSS..."
-# Management group takes precedence...partial scopes ALLOWED
-if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
-  # use string substitution to replace commas (,) with spaces (' ') for $MANAGEMENT_GROUP
-  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
-        --management-groups "${MANAGEMENT_GROUP//,/ }" --allow-partial-scopes) 
-elif [[ ! -z "$SUBSCRIPTION" ]]; then
-  # use string substitution to replace commas (,) with spaces (' ') for $SUBSCRIPTION
-  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)"\
-        --subscriptions "${SUBSCRIPTION//,/ }" --allow-partial-scopes)
-else
-  vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)")
-fi
-echo "VMSS data retrieved."
-
-# tally up VMSS vCPU -- using a here string to populate the while loop
-VMSS_LINES=$(echo $vmss | jq -r '.data[] | .sku+":"+(.capacity|tostring)')
-if [[ ! -z $VMSS_LINES ]]
-then
-  while read i; do
-    sku=$(echo $i | cut -d: -f1)
-    capacity=$(echo $i | cut -d: -f2)
-
-    vCPU=$(grep $sku: ./tmp_map | cut -d: -f2)
-    if [[ ! -z $vCPU ]]
-    then
-      total_vCPU=$(($vCPU * $capacity))
-
-      AZURE_VMSS_VCPU=$(($AZURE_VMSS_VCPU + $total_vCPU))
-    fi
-  done <<< "$VMSS_LINES"
-fi
-echo "Azure VMSS vCPU:        $AZURE_VMSS_VCPU"
+echo "VM Summary:"
+echo "==============================="
+echo "VM Instances:     $AZURE_VMS_COUNT"
+echo "VM vCPUS:         $AZURE_VMS_VCPU"
 echo ""
-###################################
-
-
-echo "Total Azure vCPU:       $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
+echo "VM Scale Set Summary:"
+echo "==============================="
+echo "VM Scale Sets:          $AZURE_VMSS_COUNT"
+echo "VM Scale Set Instances: $AZURE_VMSS_VM_COUNT"
+echo "VM Scale Set vCPUs:     $AZURE_VMSS_VCPU"
+echo ""
+echo "License Summary"
+echo "==============================="
+echo "  VM vCPUS:             $AZURE_VMS_VCPU"
+echo "+ VM Scale Set vCPUs:   $AZURE_VMSS_VCPU"
+echo "-------------------------------"
+echo "Total vCPUs:            $(($AZURE_VMS_VCPU + $AZURE_VMSS_VCPU))"
