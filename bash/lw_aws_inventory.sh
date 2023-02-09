@@ -67,11 +67,11 @@ function getRegions {
 }
 
 function getEC2Instances {
-  aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-paginate | jq 'flatten | length'
+  aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager | jq 'flatten | length'
 }
 
 function getEC2InstacevCPUs {
-  cpucounts=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running --region $r --output json --no-paginate | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
+  cpucounts=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
   returncount=0
   for cpucount in $cpucounts; do
     returncount=$(($returncount + $cpucount))
@@ -80,15 +80,15 @@ function getEC2InstacevCPUs {
 }
 
 function getECSFargateClusters {
-  aws $profile_string ecs list-clusters --region $r --output json --no-paginate | jq -r '.clusterArns[]'
+  aws $profile_string ecs list-clusters --region $r --output json --no-cli-pager | jq -r '.clusterArns[]'
 }
 
 function getECSFargateRunningTasks {
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
-    allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
     if [ -n "${allclustertasks}" ]; then
-      fargaterunningtasks=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
+      fargaterunningtasks=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
       RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
     fi
   done
@@ -99,9 +99,9 @@ function getECSFargateRunningTasks {
 function getECSFargateRunningCPUs {
   RUNNING_FARGATE_CPUS=0
   for c in $ecsfargateclusters; do
-    allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-paginate | jq -r '.taskArns | join(" ")')
+    allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
     if [ -n "${allclustertasks}" ]; then
-      cpucounts=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-paginate | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | .[].cpu | tonumber')
+      cpucounts=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | .[].cpu | tonumber')
 
       for cpucount in $cpucounts; do
         RUNNING_FARGATE_CPUS=$(($RUNNING_FARGATE_CPUS + $cpucount))
@@ -113,11 +113,11 @@ function getECSFargateRunningCPUs {
 }
 
 function getLambdaFunctions {
-  aws $profile_string lambda list-functions --region $r --output json --no-paginate | jq '.Functions | length'
+  aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions | length'
 }
 
 function getLambdaFunctionMemory {
-  memoryForAllFunctions=$(aws $profile_string lambda list-functions --region $r --output json --no-paginate | jq '.Functions[].MemorySize')
+  memoryForAllFunctions=$(aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions[].MemorySize')
   TOTAL_LAMBDA_MEMORY=0
   for memory in $memoryForAllFunctions; do
     TOTAL_LAMBDA_MEMORY=$(($TOTAL_LAMBDA_MEMORY + $memory))
