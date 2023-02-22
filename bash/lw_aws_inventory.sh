@@ -230,7 +230,7 @@ function doAnalyzeOrganization {
     for account in $(echo $accounts | jq -r '.Id')
     do
         ACCOUNTS=$(($ACCOUNTS + 1))
-        local account_name=$(echo $accounts | jq -c | grep $account | jq -r '.Name')
+        local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
         local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
 
         export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
