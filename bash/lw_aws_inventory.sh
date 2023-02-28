@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to fetch AWS inventory for Lacework sizing.
-# Requirements: awscli, jq
+# Requirements: awscli v2, jq
 
 # You can specify a profile with the -p flag and to scan an AWS organization using the -o flag
 # Note:
@@ -45,6 +45,15 @@ while getopts ":p:or:" opt; do
   esac
 done
 shift $((OPTIND -1))
+
+#Check AWS CLI pre-requisites
+AWS_CLI_VERSION=$(aws --version 2>&1 | cut -d " " -f1 | cut -d "/" -f2)
+if [[ $AWS_CLI_VERSION = 1* ]]
+then
+  echo The script requires AWS CLI v2 to run. The current version installed is version $AWS_CLI_VERSION.
+  echo See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for instructions on how to upgrade.
+  exit
+fi
 
 # Set the initial counts to zero.
 ACCOUNTS=0
