@@ -17,11 +17,11 @@ while getopts ":m:s:" opt; do
       MANAGEMENT_GROUP=$OPTARG
       ;;
     \? )
-      echo "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      printf "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      printf "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
       exit 1
       ;;
   esac
