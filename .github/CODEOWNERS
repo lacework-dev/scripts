@@ -21,9 +21,9 @@
 # Each line is a file pattern followed by one or more owners.
 # Order is important; the last matching pattern takes the most precedence.
 
-/AWS-System-Manager/ @bryancross
-/bash/ @bvboe @marcosgm @lhasadreams @iancrichardson
+/AWS-System-Manager/
+/bash/ @bvboe @marcosgm @lhasadreams @iancrichardson @gabeobrien
 /cfg_analyzers/ @rmoles @marcosgm
-/pwsh/ @marcosgm @droessmj
-/scanners/ @marcosgm @shiloam @OzNetNerd
-/test/ @droessmj
+/pwsh/ @marcosgm
+/scanners/ @marcosgm @shiloam
+/test/
