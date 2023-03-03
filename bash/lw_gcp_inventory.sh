@@ -20,11 +20,11 @@ while getopts ":f:o:p:" opt; do
       PROJECTS=$OPTARG
       ;;
     \? )
-      echo "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      printf "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined." 1>&2
+      printf "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
       exit 1
       ;;
   esac

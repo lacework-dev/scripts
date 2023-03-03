@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to fetch AWS inventory for Lacework sizing.
-# Requirements: awscli, jq
+# Requirements: awscli v2, jq
 
 # You can specify a profile with the -p flag and to scan an AWS organization using the -o flag
 # Note:
@@ -46,6 +46,15 @@ while getopts ":p:or:" opt; do
 done
 shift $((OPTIND -1))
 
+#Check AWS CLI pre-requisites
+AWS_CLI_VERSION=$(aws --version 2>&1 | cut -d " " -f1 | cut -d "/" -f2)
+if [[ $AWS_CLI_VERSION = 1* ]]
+then
+  echo The script requires AWS CLI v2 to run. The current version installed is version $AWS_CLI_VERSION.
+  echo See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for instructions on how to upgrade.
+  exit
+fi
+
 # Set the initial counts to zero.
 ACCOUNTS=0
 ORGANIZATIONS=0
@@ -87,10 +96,12 @@ function getECSFargateRunningTasks {
   RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
     allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
-    if [ -n "${allclustertasks}" ]; then
-      fargaterunningtasks=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
-      RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
-    fi
+    while read -r batch; do
+      if [ -n "${batch}" ]; then
+        fargaterunningtasks=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $batch --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | length')
+        RUNNING_FARGATE_TASKS=$(($RUNNING_FARGATE_TASKS + $fargaterunningtasks))
+      fi
+    done < <(echo $allclustertasks | xargs -n 90)
   done
 
   echo "${RUNNING_FARGATE_TASKS}"
@@ -100,13 +111,15 @@ function getECSFargateRunningCPUs {
   RUNNING_FARGATE_CPUS=0
   for c in $ecsfargateclusters; do
     allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
-    if [ -n "${allclustertasks}" ]; then
-      cpucounts=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $allclustertasks --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | .[].cpu | tonumber')
+    while read -r batch; do
+      if [ -n "${batch}" ]; then
+        cpucounts=$(aws $profile_string ecs describe-tasks --region $r --output json --tasks $batch --cluster $c --no-cli-pager | jq '[.tasks[] | select(.launchType=="FARGATE") | select(.lastStatus=="RUNNING")] | .[].cpu | tonumber')
 
-      for cpucount in $cpucounts; do
-        RUNNING_FARGATE_CPUS=$(($RUNNING_FARGATE_CPUS + $cpucount))
-      done
-    fi
+        for cpucount in $cpucounts; do
+          RUNNING_FARGATE_CPUS=$(($RUNNING_FARGATE_CPUS + $cpucount))
+        done
+      fi
+    done < <(echo $allclustertasks | xargs -n 90)
   done
 
   echo "${RUNNING_FARGATE_CPUS}"
@@ -230,7 +243,7 @@ function doAnalyzeOrganization {
     for account in $(echo $accounts | jq -r '.Id')
     do
         ACCOUNTS=$(($ACCOUNTS + 1))
-        local account_name=$(echo $accounts | jq -c | grep $account | jq -r '.Name')
+        local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
         local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
 
         export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
