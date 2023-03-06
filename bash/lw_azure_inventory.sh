@@ -35,7 +35,7 @@ function removeMap {
 }
 
 function installResourceGraphIfNotPresent {
-  resourceGraphPresent=$(az extension list  --query "contains([].name, \`resource-graph\`)")
+  resourceGraphPresent=$(az extension list -o json  --query "contains([].name, \`resource-graph\`)")
   if [ "$resourceGraphPresent" != true ] ; then
     echo "resource-graph extension not present in Az CLI installation. Enabling..."
     az extension add --name "resource-graph"
@@ -58,7 +58,7 @@ AZURE_VMSS_COUNT=0
 installResourceGraphIfNotPresent
 
 echo "Building Azure VM SKU to vCPU map..."
-az vm list-skus --resource-type virtualmachines |\
+az vm list-skus --resource-type virtualmachines -o json |\
   jq -r '.[] | .name as $parent | select(.capabilities != null) | .capabilities[] | select(.name == "vCPUs") | $parent+":"+.value' |\
   sort | uniq > ./tmp_map 
 echo "Map built successfully."
@@ -123,12 +123,12 @@ function runSubscriptionAnalysis {
 function runAnalysis {
   local scope=$1
   echo Load subscriptions
-  local expectedSubscriptions=$(az graph query -q "resourcecontainers | where type == 'microsoft.resources/subscriptions' | project name, subscriptionId" $scope)
+  local expectedSubscriptions=$(az graph query -q "resourcecontainers | where type == 'microsoft.resources/subscriptions' | project name, subscriptionId" $scope  -o json)
   local expectedSubscriptionIds=$(echo $expectedSubscriptions | jq -r '.data[] | .subscriptionId' | sort)
   echo Load VMs
-  local vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize, powerState=properties.extended.instanceView.powerState.code" $scope)
+  local vms=$(az graph query -q "Resources | where type=~'microsoft.compute/virtualmachines' | project subscriptionId, name, sku=properties.hardwareProfile.vmSize, powerState=properties.extended.instanceView.powerState.code" $scope  -o json)
   echo Load VMSS
-  local vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)" $scope)
+  local vmss=$(az graph query -q "Resources | where type=~ 'microsoft.compute/virtualmachinescalesets' | project subscriptionId, name, sku=sku.name, capacity = toint(sku.capacity)" $scope -o json)
 
   local actualSubscriptionIds=$(echo $vms | jq -r '.data[] | .subscriptionId' | sort | uniq)
 
