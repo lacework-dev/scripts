@@ -12,7 +12,6 @@ var awsCmd = &cobra.Command{
 	Long:  `AWS Billing`,
 	Run: func(cmd *cobra.Command, args []string) {
 		billingCSV := lwaws.ParseBilling(cmd)
-		//profiles := lwaws.ParseProfiles(cmd)
 		debug := helpers.ParseDebug(cmd)
 		lwaws.Run(billingCSV, debug)
 	},
