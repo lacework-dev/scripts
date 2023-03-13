@@ -43,26 +43,37 @@ function analyzeProject {
   TOTAL_PROJECTS=$(($TOTAL_PROJECTS + 1))
 
   # get all instances within the scope and turn into a map of `{count} {machine_type}`
-  local instanceMap=$(gcloud compute instances list --project $project --quiet --format=json | jq -r '.[] | select(.status != ("TERMINATED")) | .machineType' | sort | uniq -c)
+  local instanceList=$(gcloud compute instances list --project $project --quiet --format=json 2>&1)
+  if [[ $instanceList = [* ]] 
+  then
+    local instanceMap=$(echo $instanceList | jq -r '.[] | select(.status != ("TERMINATED")) | .machineType' | sort | uniq -c)
+    # make the for loop split on newline vs. space
+    IFS=$'\n' 
+    # for each entry in the map, get the vCPU value for the type and aggregate the values
+    for instance in $instanceMap; 
+    do
+      local instance=$(echo $instance | tr -s ' ') # trim all but one leading space
+      local count=$(echo $instance | cut -d ' ' -f 2)  # split and take the second value (count)
+      local machineTypeUrl=$(echo $instance | cut -d ' ' -f 3) # split and take third value (machine_type)
+      
+      local location=$(echo $machineTypeUrl | cut -d "/" -f9) # extract location from url
+      local machineType=$(echo $machineTypeUrl | cut -d "/" -f11) # extract machine type from url
+      local typeVCPUValue=$(gcloud compute machine-types describe $machineType --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
 
-  # make the for loop split on newline vs. space
-  IFS=$'\n' 
-  # for each entry in the map, get the vCPU value for the type and aggregate the values
-  for instance in $instanceMap; 
-  do
-    local instance=$(echo $instance | tr -s ' ') # trim all but one leading space
-    local count=$(echo $instance | cut -d ' ' -f 2)  # split and take the second value (count)
-    local machineTypeUrl=$(echo $instance | cut -d ' ' -f 3) # split and take third value (machine_type)
-    
-    local location=$(echo $machineTypeUrl | cut -d "/" -f9) # extract location from url
-    local machineType=$(echo $machineTypeUrl | cut -d "/" -f11) # extract machine type from url
-    local typeVCPUValue=$(gcloud compute machine-types describe $machineType --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
-
-    TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
-    TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
-    projectVCPUs=$(($scopeVCPUs + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
-    projectVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
-  done
+      TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
+      TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
+      projectVCPUs=$(($scopeVCPUs + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
+      projectVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
+    done
+  elif [[ $instanceList == *"SERVICE_DISABLED"* ]]
+  then
+    projectVmCount="\"INFO: Compute instance API disabled\""
+  elif [[ $instanceList == *"PERMISSION_DENIED"* ]]
+  then
+    projectVmCount="\"INFO: Data not available. Permission denied\""
+  else
+    projectVmCount="\"ERROR: Failed to load instance information: $instanceList\""
+  fi
   echo "\"$project\", $projectVmCount, $projectVCPUs"
 }
 
