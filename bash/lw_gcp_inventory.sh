@@ -43,7 +43,7 @@ function analyzeProject {
   TOTAL_PROJECTS=$(($TOTAL_PROJECTS + 1))
 
   # get all instances within the scope and turn into a map of `{count} {machine_type}`
-  local instanceMap=$(gcloud compute instances list --project $project --quiet --format=json | jq -r '.[] | select(.status = ("TERMINATED")) | .machineType' | sort | uniq -c)
+  local instanceMap=$(gcloud compute instances list --project $project --quiet --format=json | jq -r '.[] | select(.status != ("TERMINATED")) | .machineType' | sort | uniq -c)
 
   # make the for loop split on newline vs. space
   IFS=$'\n' 
