@@ -12,34 +12,69 @@
 # 3. The script takes a while to run in large accounts with many resources, provides details per 
 # account and a final summary of all resources found.
 
+function showHelp {
+  echo "lw_aws_inventory.sh is a tool for estimating Lacework license vCPUs in an AWS environment."
+  echo "It leverages the AWS CLI and by default the default profile that’s either configured using"
+  echo "environment variables or configuration files in the ~/.aws folder. The script provides"
+  echo "output in a CSV format to be imported into a spreadsheet, as well as an easy-to-read summary."
+  echo ""
+  echo "Note the following about the script:"
+  echo "* Requires AWS CLI v2 to run"
+  echo "* Works great in a cloud shell"
+  echo "* It has been verified to work on Mac and Linux based systems"
+  echo "* Has been observed to work with Windows Subsystem for Linux to run on Windows"
+  echo "* Not compatible with Cygwin on Windows"
+  echo "* Run using the following syntax: ./lw_aws_inventory.sh, sh lw_aws_inventory.sh will not work"
+  echo ""
+  echo "Available flags:"
+  echo " -p    Comma separated list of AWS CLI profiles to scan."
+  echo "       If not specified, the tool will use the connection information that the AWS CLI picks"
+  echo "       by default, which will either be whatever is set in environment variables or as the"
+  echo "       default profile."
+  echo "       ./lw_aws_inventory.sh -p default"
+  echo "       ./lw_aws_inventory.sh -p development,test,production"
+  echo " -r    Comma-separated list of regions to scan."
+  echo "       By default, the script will attempt to collect sizing data for all regions returned by"
+  echo "       aws ec2 describe-regions. This is by default a list of 17 regions. This parameter will"
+  echo "       limit the scope to a pre-defined set of regions, which will avoid errors when regions"
+  echo "       are disabled and speed up the scan."
+  echo "       ./lw_aws_inventory.sh -r us-east-1"
+  echo "       ./lw_aws_inventory.sh -r us-east-1,us-west-1"
+  echo " -o    Scan a complete AWS organization"
+  echo "       This uses aws organizations list-accounts to determine what accounts are in an"
+  echo "       organization and assumes a cross account role to scan each account in the organization."
+  echo "       The role typically used cross-account access is OrganizationAccountAccessRole, which"
+  echo "       is accessed from a user in the master account."
+  echo "       ./lw_aws_inventory.sh -o OrganizationAccountAccessRole"
+}
 
 AWS_PROFILE=""
-SCAN_ORGANIZATION=FALSE
 export AWS_MAX_ATTEMPTS=20
 REGIONS=""
+ORG_ACCESS_ROLE=""
 
 ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:or:" opt; do
+while getopts ":p:o:r:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
       ;;
     o )
-      SCAN_ORGANIZATION=TRUE
+      ORG_ACCESS_ROLE=$OPTARG
       ;;
     r )
       REGIONS=$(echo $OPTARG | sed "s/,/ /g")
       ;;
     \? )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o] [-r regions]" 1>&2
+      showHelp
       exit 1
       ;;
     : )
-      echo "Usage: ./lw_aws_inventory.sh [-p profile] [-o] [-r regions]" 1>&2
+      showHelp
       exit 1
       ;;
   esac
@@ -55,6 +90,15 @@ then
   exit
 fi
 
+#Ensure the script runs with the BASH shell
+SHELL=$(ps -cp "$$" -o command="")
+if [[ $SHELL != "bash" ]]
+then
+  echo The script is running with $SHELL and requires bash to run.
+  echo Use ./lw_aws_inventory.sh to run the script using the required shell.
+  exit
+fi
+
 # Set the initial counts to zero.
 ACCOUNTS=0
 ORGANIZATIONS=0
@@ -66,6 +110,13 @@ ECS_FARGATE_CPUS=0
 LAMBDA_FUNCTIONS=0
 LAMBDA_MEMORY_TOTAL=0
 
+function cleanup {
+  # Revert to original AWS CLI configuration if script is stopped during execution
+  export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
+  export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
+  export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+}
+trap cleanup EXIT
 
 function getAccountId {
   aws $profile_string sts get-caller-identity --query "Account" --output text
@@ -244,7 +295,7 @@ function doAnalyzeOrganization {
     do
         ACCOUNTS=$(($ACCOUNTS + 1))
         local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
-        local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/OrganizationAccountAccessRole)
+        local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE)
 
         export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
         export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
@@ -256,7 +307,7 @@ function doAnalyzeOrganization {
     done
 }
 
-if [ $SCAN_ORGANIZATION = "TRUE" ]
+if [ -n "$ORG_ACCESS_ROLE" ]
 then
     for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
     do
