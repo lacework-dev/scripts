@@ -35,7 +35,8 @@ function showHelp {
   echo "       ./lw_aws_inventory.sh -r us-east-1,us-west-1"
   echo " -o    Scan a complete AWS organization"
   echo "       This uses aws organizations list-accounts to determine what accounts are in an"
-  echo "       organization and assumes a cross account role to scan each account in the organization."
+  echo "       organization and assumes a cross account role to scan each account in the organization,"
+  echo "       except for the master account, which is scanned directly."
   echo "       The role typically used cross-account access is OrganizationAccountAccessRole, which"
   echo "       is accessed from a user in the master account."
   echo "       ./lw_aws_inventory.sh -o OrganizationAccountAccessRole"
@@ -112,18 +113,24 @@ function cleanup {
 trap cleanup EXIT
 
 function getAccountId {
+  local profile_string=$1
   aws $profile_string sts get-caller-identity --query "Account" --output text
 }
 
 function getRegions {
+  local profile_string=$1
   aws $profile_string ec2 describe-regions --output json | jq -r '.[] | .[] | .RegionName'
 }
 
 function getEC2Instances {
+  local profile_string=$1
+  local r=$2
   aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager | jq 'flatten | length'
 }
 
 function getEC2InstacevCPUs {
+  local profile_string=$1
+  local r=$2
   cpucounts=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[CpuOptions]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager | jq  '.[] | .[] | .[] | .CoreCount * .ThreadsPerCore')
   returncount=0
   for cpucount in $cpucounts; do
@@ -133,11 +140,16 @@ function getEC2InstacevCPUs {
 }
 
 function getECSFargateClusters {
+  local profile_string=$1
+  local r=$2
   aws $profile_string ecs list-clusters --region $r --output json --no-cli-pager | jq -r '.clusterArns[]'
 }
 
 function getECSFargateRunningTasks {
-  RUNNING_FARGATE_TASKS=0
+  local profile_string=$1
+  local r=$2
+  local ecsfargateclusters=$3
+  local RUNNING_FARGATE_TASKS=0
   for c in $ecsfargateclusters; do
     allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
     while read -r batch; do
@@ -152,7 +164,10 @@ function getECSFargateRunningTasks {
 }
 
 function getECSFargateRunningCPUs {
-  RUNNING_FARGATE_CPUS=0
+  local profile_string=$1
+  local r=$2
+  local ecsfargateclusters=$3
+  local RUNNING_FARGATE_CPUS=0
   for c in $ecsfargateclusters; do
     allclustertasks=$(aws $profile_string ecs list-tasks --region $r --output json --cluster $c --no-cli-pager | jq -r '.taskArns | join(" ")')
     while read -r batch; do
@@ -170,10 +185,14 @@ function getECSFargateRunningCPUs {
 }
 
 function getLambdaFunctions {
+  local profile_string=$1
+  local r=$2
   aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions | length'
 }
 
 function getLambdaFunctionMemory {
+  local profile_string=$1
+  local r=$2
   memoryForAllFunctions=$(aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions[].MemorySize')
   TOTAL_LAMBDA_MEMORY=0
   for memory in $memoryForAllFunctions; do
@@ -184,17 +203,17 @@ function getLambdaFunctionMemory {
 }
 
 function calculateInventory {
-  account_name=$1
-  profile_string=$2
-  accountid=$(getAccountId "profile_string")
-  accountEC2Instances=0
-  accountEC2vCPUs=0
-  accountECSFargateClusters=0
-  accountECSFargateRunningTasks=0
-  accountECSFargateCPUs=0
-  accountLambdaFunctions=0
-  accountLambdaMemory=0
-  accountTotalvCPUs=0
+  local account_name=$1
+  local profile_string=$2
+  local accountid=$(getAccountId "$profile_string")
+  local accountEC2Instances=0
+  local accountEC2vCPUs=0
+  local accountECSFargateClusters=0
+  local accountECSFargateRunningTasks=0
+  local accountECSFargateCPUs=0
+  local accountLambdaFunctions=0
+  local accountLambdaMemory=0
+  local accountTotalvCPUs=0
 
   printf "$account_name, $accountid,"
   local regionsToScan=$REGIONS
@@ -207,32 +226,32 @@ function calculateInventory {
   for r in $regionsToScan; do
     printf " $r"
 
-    instances=$(getEC2Instances $r $profile_string)
+    instances=$(getEC2Instances "$profile_string" "$r")
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
     accountEC2Instances=$(($accountEC2Instances + $instances))
 
-    ec2vcpu=$(getEC2InstacevCPUs $r $profile_string)
+    ec2vcpu=$(getEC2InstacevCPUs "$profile_string" "$r")
     EC2_INSTANCE_VCPU=$(($EC2_INSTANCE_VCPU + $ec2vcpu))
     accountEC2vCPUs=$(($accountEC2vCPUs + $ec2vcpu))
 
-    ecsfargateclusters=$(getECSFargateClusters $r $profile_string)
+    ecsfargateclusters=$(getECSFargateClusters "$profile_string" "$r")
     ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
     ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
     accountECSFargateClusters=$(($accountECSFargateClusters + $ecsfargateclusterscount))
 
-    ecsfargaterunningtasks=$(getECSFargateRunningTasks $r $ecsfargateclusters $profile_string)
+    ecsfargaterunningtasks=$(getECSFargateRunningTasks "$profile_string" "$r" "$ecsfargateclusters")
     ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
     accountECSFargateRunningTasks=$(($accountECSFargateRunningTasks + $ecsfargaterunningtasks))
 
-    ecsfargatecpu=$(getECSFargateRunningCPUs $r $profile_string)
+    ecsfargatecpu=$(getECSFargateRunningCPUs "$profile_string" "$r" "$ecsfargateclusters")
     ECS_FARGATE_CPUS=$(($ECS_FARGATE_CPUS + $ecsfargatecpu))
     accountECSFargateCPUs=$(($accountECSFargateCPUs + $ecsfargatecpu))
 
-    lambdafunctions=$(getLambdaFunctions $r $profile_string)
+    lambdafunctions=$(getLambdaFunctions "$profile_string" "$r")
     LAMBDA_FUNCTIONS=$(($LAMBDA_FUNCTIONS + $lambdafunctions))
     accountLambdaFunctions=$(($accountLambdaFunctions + $lambdafunctions))
 
-    lambdamemory=$(getLambdaFunctionMemory $r $profile_string)
+    lambdamemory=$(getLambdaFunctionMemory "$profile_string" "$r")
     LAMBDA_MEMORY_TOTAL=$(($LAMBDA_MEMORY_TOTAL + $lambdamemory))
     accountLambdaMemory=$(($accountLambdaMemory + $lambdamemory))
   done
@@ -283,20 +302,34 @@ echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Farg
 
 function doAnalyzeOrganization {
     local org_profile_string=$1
+    local orgAccountId=$(getAccountId "$org_profile_string")
     local accounts=$(aws $org_profile_string organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
     for account in $(echo $accounts | jq -r '.Id')
     do
-        ACCOUNTS=$(($ACCOUNTS + 1))
         local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
-        local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE)
-
-        export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
-        export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
-        export AWS_SESSION_TOKEN=$(echo $account_credentials | jq -r '.Credentials.SessionToken')
-        calculateInventory "$account_name" ""
-        export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
-        export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
-        export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+        if [[ $orgAccountId == $account ]]
+        then
+          # Found master account, role most likely don't exist, just connnect directly
+          ACCOUNTS=$(($ACCOUNTS + 1))
+          calculateInventory "$account_name" "$org_profile_string"
+        else
+          local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE 2>&1)
+          if [[ $account_credentials = {* ]] 
+          then
+            #Got ok credential back, do analysis
+            ACCOUNTS=$(($ACCOUNTS + 1))
+            export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
+            export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
+            export AWS_SESSION_TOKEN=$(echo $account_credentials | jq -r '.Credentials.SessionToken')
+            calculateInventory "$account_name" ""
+            export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
+            export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+          else
+            #Failed to connect, print error message
+            echo "ERROR: Failed to connect to account \"$account_name\" ($account). ${account_credentials}"
+          fi
+        fi
     done
 }
 
