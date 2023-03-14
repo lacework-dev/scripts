@@ -34,82 +34,107 @@ shift $((OPTIND -1))
 # Set the initial counts to zero.
 TOTAL_GCE_VCPU=0
 TOTAL_GCE_VM_COUNT=0
+TOTAL_PROJECTS=0
 
-function retrieveConsumptionData {
-  local scope=$1
-  local scopeVCPUs=0
-  local scopeVmCount=0
+function analyzeProject {
+  local project=$1
+  local projectVCPUs=0
+  local projectVmCount=0
+  TOTAL_PROJECTS=$(($TOTAL_PROJECTS + 1))
 
-  # get all instances within the scope
-  local instances=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Instance" --format=json)
+  # get all instances within the scope and turn into a map of `{count} {machine_type}`
+  local instanceList=$(gcloud compute instances list --project $project --quiet --format=json 2>&1)
+  if [[ $instanceList = [* ]] 
+  then
+    local instanceMap=$(echo $instanceList | jq -r '.[] | select(.status != ("TERMINATED")) | .machineType' | sort | uniq -c)
+    # make the for loop split on newline vs. space
+    IFS=$'\n' 
+    # for each entry in the map, get the vCPU value for the type and aggregate the values
+    for instance in $instanceMap; 
+    do
+      local instance=$(echo $instance | tr -s ' ') # trim all but one leading space
+      local count=$(echo $instance | cut -d ' ' -f 2)  # split and take the second value (count)
+      local machineTypeUrl=$(echo $instance | cut -d ' ' -f 3) # split and take third value (machine_type)
+      
+      local location=$(echo $machineTypeUrl | cut -d "/" -f9) # extract location from url
+      local machineType=$(echo $machineTypeUrl | cut -d "/" -f11) # extract machine type from url
+      local typeVCPUValue=$(gcloud compute machine-types describe $machineType --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
 
-  # get a map of `{count} {machine_type}` for the scope that are not terminated / stopped
-  local machine_count_map=$(echo $instances | jq -r '.[] | select(.state != ("TERMINATED")) | .additionalAttributes.machineType + " " + .location + " " + .project' | sort | uniq -c )
-  
-  #Read project information that's within scope for this mapping
-  local projects=$(gcloud asset search-all-resources --scope=$scope --asset-types="compute.googleapis.com/Project" --format=json)
+      TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
+      TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
+      projectVCPUs=$(($scopeVCPUs + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
+      projectVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
+    done
+  elif [[ $instanceList == *"SERVICE_DISABLED"* ]]
+  then
+    projectVmCount="\"INFO: Compute instance API disabled\""
+  elif [[ $instanceList == *"PERMISSION_DENIED"* ]]
+  then
+    projectVmCount="\"INFO: Data not available. Permission denied\""
+  else
+    projectVmCount="\"ERROR: Failed to load instance information: $instanceList\""
+  fi
+  echo "\"$project\", $projectVmCount, $projectVCPUs"
+}
 
-  # make the for loop split on newline vs. space
-  IFS=$'\n' 
-  # for each entry in the map, get the vCPU value for the type and aggregate the values
-  for machine_data in $machine_count_map; 
+function analyzeFolder {
+  local folder=$1
+
+  local folders=$(gcloud resource-manager folders list --folder $folder --format=json | jq -r '.[] | .name' | sed 's/.*\///')
+  for f in $folders;
   do
-    local machine_data=$(echo $machine_data | tr -s ' ') # trim all but one leading space
-    local count=$(echo $machine_data | cut -d ' ' -f 2)  # split and take the second value (count)
-    local machine_type=$(echo $machine_data | cut -d ' ' -f 3) # split and take third value (machine_type)
-    local location=$(echo $machine_data | cut -d ' ' -f 4) # split and take fourth value (location)
-    local projectId=$(echo $machine_data | cut -d ' ' -f 5) # split and take fifth value (project)
-    local project=$(echo $projects | jq -r --arg projectId "$projectId" '.[] | select(.project==$projectId) | .displayName')
-    local type_vcpu_value=$(gcloud compute machine-types describe $machine_type --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
-
-    TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
-    TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
-    scopeVCPUs=$(($scopeVCPUs + (($count * $type_vcpu_value)))) # increment total count, including Standard GKE
-    scopeVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
+    analyzeFolder "$f"
   done
 
-  echo "\"$scope\", $scopeVmCount, $scopeVCPUs"
+  local projects=$(gcloud projects list --format=json --filter="parent.id=$folder AND parent.type=folder" | jq -r '.[] | .projectId')
+  for project in $projects;
+  do
+    analyzeProject "$project"
+  done
 }
+
+function analyzeOrganization {
+  local organization=$1
+
+  local folders=$(gcloud resource-manager folders list --organization $organization --format=json | jq -r '.[] | .name' | sed 's/.*\///')
+  for f in $folders;
+  do
+    analyzeFolder "$f"
+  done
+
+  local projects=$(gcloud projects list --format=json --filter="parent.id=$organization AND parent.type=organization" | jq -r '.[] | .projectId')
+  for project in $projects;
+  do
+    analyzeProject "$project"
+  done
+}
+
+echo \"Project\", \"VM Count\", \"vCPUs\"
 
 if [ -n "$FOLDERS" ]
 then
-  echo \"Folder\", \"VM Count\", \"vCPUs\"
   for FOLDER in $(echo $FOLDERS | sed "s/,/ /g")
   do
-    retrieveConsumptionData "folders/$FOLDER"
+    analyzeFolder "$FOLDER"
   done
 elif [ -n "$ORGANIZATIONS" ]
 then
-  echo \"Organization\", \"VM Count\", \"vCPUs\"
   for ORGANIZATION in $(echo $ORGANIZATIONS | sed "s/,/ /g")
   do
-    retrieveConsumptionData "organizations/$ORGANIZATION"
+    analyzeOrganization "$ORGANIZATION"
   done
 elif [ -n "$PROJECTS" ]
 then
-  echo \"Project\", \"VM Count\", \"vCPUs\"
   for PROJECT in $(echo $PROJECTS | sed "s/,/ /g")
   do
-    retrieveConsumptionData "projects/$PROJECT"
+    analyzeProject "$PROJECT"
   done
 else
-
-  foundOrganizations=$(gcloud organizations list --format json | jq -r '.[].name')
-  if [ -n "$foundOrganizations" ]
-  then
-    echo \"Organization\", \"VM Count\", \"vCPUs\"
-    for foundOrganization in $foundOrganizations;
-    do
-      retrieveConsumptionData "organizations/$foundOrganization"
-    done
-  else
-    foundProjects=$(gcloud projects list --format json | jq -r ".[] | .projectId")
-    echo \"Project\", \"VM Count\", \"vCPUs\"
-    for foundProject in $foundProjects;
-    do
-      retrieveConsumptionData "projects/$foundProject"
-    done
-  fi
+  foundProjects=$(gcloud projects list --format json | jq -r ".[] | .projectId")
+  for foundProject in $foundProjects;
+  do
+    analyzeProject "$foundProject"
+  done
 fi
 
 
@@ -118,5 +143,6 @@ echo "Lacework inventory collection complete."
 echo ""
 echo "License Summary:"
 echo "================================================"
+echo "Projects analyzed:                     $TOTAL_PROJECTS"
 echo "Number of VMs, including standard GKE: $TOTAL_GCE_VM_COUNT"
 echo "vCPUs:                                 $TOTAL_GCE_VCPU"
