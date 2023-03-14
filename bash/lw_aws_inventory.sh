@@ -2,15 +2,8 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli v2, jq
 
-# You can specify a profile with the -p flag and to scan an AWS organization using the -o flag
-# Note:
-# 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
-# there are no spaces between accounts in the list
-# 2. It's possible to specify a comma separated list of regions to scan to speed up the scan.
-# 2. In order to scan a whole AWS organiation, the scripts assumes the presence of a OrganizationAccountAccessRole
-# role in each account to perform the scan.
-# 3. The script takes a while to run in large accounts with many resources, provides details per 
-# account and a final summary of all resources found.
+# Run ./lw_aws_inventory.sh -h for help on how to run the script.
+# Or just read the text in showHelp below.
 
 function showHelp {
   echo "lw_aws_inventory.sh is a tool for estimating Lacework license vCPUs in an AWS environment."
