@@ -125,7 +125,13 @@ function getRegions {
 function getEC2Instances {
   local profile_string=$1
   local r=$2
-  aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager | jq 'flatten | length'
+  local instances=$(aws $profile_string ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --filters Name=instance-state-name,Values=running --region $r --output json --no-cli-pager  2>&1)
+  if [[ $instances = [* ]] 
+  then
+    echo $(echo $instances | jq 'flatten | length')
+  else
+    echo "-1"
+  fi
 }
 
 function getEC2InstacevCPUs {
@@ -227,6 +233,11 @@ function calculateInventory {
     printf " $r"
 
     instances=$(getEC2Instances "$profile_string" "$r")
+    if [[ $instances < 0 ]]
+    then
+      printf " (ERROR: No access)"
+      break
+    fi
     EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
     accountEC2Instances=$(($accountEC2Instances + $instances))
 
