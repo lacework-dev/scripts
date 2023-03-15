@@ -136,13 +136,13 @@ then
 fi
 
 #Ensure the script runs with the BASH shell
-SHELL=$(ps -cp "$$" -o command="")
-if [[ $SHELL != "bash" ]]
-then
-  echo The script is running with $SHELL and requires bash to run.
-  echo Use ./lw_aws_inventory.sh to run the script using the required shell.
-  exit
-fi
+#SHELL=$(ps -cp "$$" -o command="")
+#if [[ $SHELL != "bash" ]]
+#then
+#  echo The script is running with $SHELL and requires bash to run.
+#  echo Use ./lw_aws_inventory.sh to run the script using the required shell.
+#  exit
+#fi
 
 # Set the initial counts to zero.
 ACCOUNTS=0
