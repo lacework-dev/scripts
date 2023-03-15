@@ -20,39 +20,53 @@ function showHelp {
   echo "* Run using the following syntax: ./lw_aws_inventory.sh, sh lw_aws_inventory.sh will not work"
   echo ""
   echo "Available flags:"
-  echo " -p    Comma separated list of AWS CLI profiles to scan."
-  echo "       If not specified, the tool will use the connection information that the AWS CLI picks"
-  echo "       by default, which will either be whatever is set in environment variables or as the"
-  echo "       default profile."
-  echo "       ./lw_aws_inventory.sh -p default"
-  echo "       ./lw_aws_inventory.sh -p development,test,production"
-  echo " -r    Comma-separated list of regions to scan."
-  echo "       By default, the script will attempt to collect sizing data for all regions returned by"
-  echo "       aws ec2 describe-regions. This is by default a list of 17 regions. This parameter will"
-  echo "       limit the scope to a pre-defined set of regions, which will avoid errors when regions"
-  echo "       are disabled and speed up the scan."
-  echo "       ./lw_aws_inventory.sh -r us-east-1"
-  echo "       ./lw_aws_inventory.sh -r us-east-1,us-west-1"
-  echo " -o    Scan a complete AWS organization"
-  echo "       This uses aws organizations list-accounts to determine what accounts are in an"
-  echo "       organization and assumes a cross account role to scan each account in the organization,"
-  echo "       except for the master account, which is scanned directly."
-  echo "       The role typically used cross-account access is OrganizationAccountAccessRole, which"
-  echo "       is accessed from a user in the master account."
-  echo "       ./lw_aws_inventory.sh -o OrganizationAccountAccessRole"
+  echo " -p       Comma separated list of AWS CLI profiles to scan."
+  echo "          If not specified, the tool will use the connection information that the AWS CLI picks"
+  echo "          by default, which will either be whatever is set in environment variables or as the"
+  echo "          default profile."
+  echo "          ./lw_aws_inventory.sh -p default"
+  echo "          ./lw_aws_inventory.sh -p development,test,production"
+  echo " -r       Comma-separated list of regions to scan."
+  echo "          By default, the script will attempt to collect sizing data for all regions returned by"
+  echo "          aws ec2 describe-regions. This is by default a list of 17 regions. This parameter will"
+  echo "          limit the scope to a pre-defined set of regions, which will avoid errors when regions"
+  echo "          are disabled and speed up the scan."
+  echo "          ./lw_aws_inventory.sh -r us-east-1"
+  echo "          ./lw_aws_inventory.sh -r us-east-1,us-west-1"
+  echo " -o       Scan a complete AWS organization"
+  echo "          This uses aws organizations list-accounts to determine what accounts are in an"
+  echo "          organization and assumes a cross account role to scan each account in the organization,"
+  echo "          except for the master account, which is scanned directly."
+  echo "          The role typically used cross-account access is OrganizationAccountAccessRole, which"
+  echo "          is accessed from a user in the master account."
+  echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole"
+  echo " -a       Scan a specific account within an organization"
+  echo "          This would leverage the cross-account role defined using the -o parameter to only"
+  echo "          scan an individual account within an AWS organisation."
+  echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890"
+  echo " --output Specify level of output"
+  echo "          all         - CSV and summary"
+  echo "          summary     - Summary only"
+  echo "          csv         - CSV only"
+  echo "          csvnoheader - CVS only without header"
+  echo "          ./lw_aws_inventory.sh --ouptput csv"
 }
 
 AWS_PROFILE=""
 export AWS_MAX_ATTEMPTS=20
 REGIONS=""
 ORG_ACCESS_ROLE=""
+ORG_SCAN_ACCOUNT=""
+PRINT_CSV_DETAILS="true"
+PRINT_CSV_HEADER="true"
+PRINT_SUMMARY="true"
 
 ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:o:r:" opt; do
+while getopts ":p:o:r:a:-:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -60,9 +74,46 @@ while getopts ":p:o:r:" opt; do
     o )
       ORG_ACCESS_ROLE=$OPTARG
       ;;
+    a )
+      ORG_SCAN_ACCOUNT=$OPTARG
+      ;;
     r )
       REGIONS=$(echo $OPTARG | sed "s/,/ /g")
       ;;
+    -)
+        case "${OPTARG}" in
+            #Default configuration is to print CSV and summary. This section overrides those settings as needed
+            output)
+                output="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                echo $output
+                echo $OPTIND
+                case "${output}" in
+                  csv)
+                    PRINT_SUMMARY="false"
+                    ;;
+                  summary)
+                    PRINT_CSV_DETAILS="false"
+                    PRINT_CSV_HEADER="false"
+                    ;;
+                  all)
+                    #Do nothing, default configuration
+                    ;;
+                  csvnoheader)
+                    PRINT_CSV_HEADER="false"
+                    PRINT_SUMMARY="false"
+                    ;;
+                  *)
+                    echo "Invalid argument. Valid options for --output: csv, summary, all, csvnoheader"
+                    showHelp
+                    exit  
+                    ;;
+                esac
+                ;;
+            *)
+              showHelp
+              exit
+              ;;
+        esac;;    
     \? )
       showHelp
       exit 1
@@ -221,7 +272,10 @@ function calculateInventory {
   local accountLambdaMemory=0
   local accountTotalvCPUs=0
 
-  printf "$account_name, $accountid,"
+  if [[ $PRINT_CSV_DETAILS == "true" ]]
+  then
+    printf "$account_name, $accountid,"
+  fi
   local regionsToScan=$REGIONS
   if [ -z "$regionsToScan" ]
   then
@@ -230,7 +284,10 @@ function calculateInventory {
   fi
 
   for r in $regionsToScan; do
-    printf " $r"
+    if [[ $PRINT_CSV_DETAILS == "true" ]]
+    then
+      printf " $r"
+    fi
 
     instances=$(getEC2Instances "$profile_string" "$r")
     if [[ $instances < 0 ]]
@@ -271,7 +328,10 @@ function calculateInventory {
   accountLambdavCPUs=$(($accountLambdaMemory / 1024))
   accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs + $accountLambdavCPUs))
 
-  echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargateCPUs", "$accountECSFargatevCPUs", "$accountLambdaFunctions", "$accountLambdaMemory", "$accountLambdavCPUs", "$accountTotalvCPUs"
+    if [[ $PRINT_CSV_DETAILS == "true" ]]
+    then
+      echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargateCPUs", "$accountECSFargatevCPUs", "$accountLambdaFunctions", "$accountLambdaMemory", "$accountLambdavCPUs", "$accountTotalvCPUs"
+    fi
 }
 
 function textoutput {
@@ -308,40 +368,56 @@ function textoutput {
   echo "= Total vCPUs:          $TOTAL_VCPUS"
 }
 
-echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+if [[ $PRINT_CSV_HEADER == "true" ]]
+then
+  echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+fi
 
-
-function doAnalyzeOrganization {
+function analyzeOrganization {
     local org_profile_string=$1
     local orgAccountId=$(getAccountId "$org_profile_string")
     local accounts=$(aws $org_profile_string organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
-    for account in $(echo $accounts | jq -r '.Id')
-    do
-        local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
-        if [[ $orgAccountId == $account ]]
-        then
-          # Found master account, role most likely don't exist, just connnect directly
-          ACCOUNTS=$(($ACCOUNTS + 1))
-          calculateInventory "$account_name" "$org_profile_string"
-        else
-          local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE 2>&1)
-          if [[ $account_credentials = {* ]] 
+    if [ -n "$ORG_SCAN_ACCOUNT" ]
+    then
+      local account_name=$(echo $accounts | jq -r --arg account "$ORG_SCAN_ACCOUNT" 'select(.Id==$account) | .Name')
+      analyzeOrganizationAccount "$org_profile_string" "$ORG_SCAN_ACCOUNT" "$account_name"
+    else
+      for account in $(echo $accounts | jq -r '.Id')
+      do
+          local account_name=$(echo $accounts | jq -r --arg account "$account" 'select(.Id==$account) | .Name')
+          if [[ $orgAccountId == $account ]]
           then
-            #Got ok credential back, do analysis
+            # Found master account, role most likely don't exist, just connnect directly
             ACCOUNTS=$(($ACCOUNTS + 1))
-            export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
-            export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
-            export AWS_SESSION_TOKEN=$(echo $account_credentials | jq -r '.Credentials.SessionToken')
-            calculateInventory "$account_name" ""
-            export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
-            export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+            calculateInventory "$account_name" "$org_profile_string"
           else
-            #Failed to connect, print error message
-            echo "ERROR: Failed to connect to account \"$account_name\" ($account). ${account_credentials}"
+            analyzeOrganizationAccount "$org_profile_string" "$account" "$account_name"
           fi
-        fi
-    done
+      done
+    fi
+}
+
+function analyzeOrganizationAccount {
+  local org_profile_string=$1
+  local account=$2
+  local account_name=$3
+
+  local account_credentials=$(aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE 2>&1)
+  if [[ $account_credentials = {* ]] 
+  then
+    #Got ok credential back, do analysis
+    ACCOUNTS=$(($ACCOUNTS + 1))
+    export AWS_ACCESS_KEY_ID=$(echo $account_credentials | jq -r '.Credentials.AccessKeyId')
+    export AWS_SECRET_ACCESS_KEY=$(echo $account_credentials | jq -r '.Credentials.SecretAccessKey')
+    export AWS_SESSION_TOKEN=$(echo $account_credentials | jq -r '.Credentials.SessionToken')
+    calculateInventory "$account_name" ""
+    export AWS_ACCESS_KEY_ID=$ORG_AWS_ACCESS_KEY_ID
+    export AWS_SECRET_ACCESS_KEY=$ORG_AWS_SECRET_ACCESS_KEY
+    export AWS_SESSION_TOKEN=$ORG_AWS_SESSION_TOKEN
+  else
+    #Failed to connect, print error message
+    echo "ERROR: Failed to connect to account \"$account_name\" ($account). ${account_credentials}"
+  fi
 }
 
 if [ -n "$ORG_ACCESS_ROLE" ]
@@ -350,13 +426,13 @@ then
     do
         ORGANIZATIONS=$(($ORGANIZATIONS + 1))
         PROFILE_STRING="--profile $PROFILE"
-        doAnalyzeOrganization "$PROFILE_STRING"
+        analyzeOrganization "$PROFILE_STRING"
     done
 
     if [ -z "$PROFILE" ]
     then
         ORGANIZATIONS=1
-        doAnalyzeOrganization ""
+        analyzeOrganization ""
     fi
 else
     for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
@@ -379,4 +455,7 @@ ECS_FARGATE_VCPUS=$(($ECS_FARGATE_CPUS / 1024))
 LAMBDA_VCPUS=$(($LAMBDA_MEMORY_TOTAL / 1024))
 TOTAL_VCPUS=$(($EC2_INSTANCE_VCPU + $ECS_FARGATE_VCPUS + $LAMBDA_VCPUS))
 
-textoutput
+if [[ $PRINT_SUMMARY == "true" ]]
+then
+  textoutput
+fi
