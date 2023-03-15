@@ -136,13 +136,13 @@ then
 fi
 
 #Ensure the script runs with the BASH shell
-#SHELL=$(ps -cp "$$" -o command="")
-#if [[ $SHELL != "bash" ]]
-#then
-#  echo The script is running with $SHELL and requires bash to run.
-#  echo Use ./lw_aws_inventory.sh to run the script using the required shell.
-#  exit
-#fi
+echo $BASH | grep -q "bash"
+if [ $? -ne 0 ]
+then
+  echo The script is running using the incorrect shell.
+  echo Use ./lw_aws_inventory.sh to run the script using the required shell, bash.
+  exit
+fi
 
 # Set the initial counts to zero.
 ACCOUNTS=0
