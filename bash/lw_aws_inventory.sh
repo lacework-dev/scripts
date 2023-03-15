@@ -417,6 +417,7 @@ function analyzeOrganizationAccount {
   else
     #Failed to connect, print error message
     echo "ERROR: Failed to connect to account \"$account_name\" ($account). ${account_credentials}"
+    echo "aws $org_profile_string sts assume-role --role-session-name LW-INVENTORY --role-arn arn:aws:iam::$account:role/$ORG_ACCESS_ROLE"
   fi
 }
 
