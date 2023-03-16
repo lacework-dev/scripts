@@ -44,6 +44,10 @@ function showHelp {
   echo "          This would leverage the cross-account role defined using the -o parameter to only"
   echo "          scan an individual account within an AWS organisation."
   echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890"
+  echo " -g       Generates a script that calls this script for each account / profile given. Useful for"
+  echo "          analyzing AWS organizations with many accounts to break up the analysis in smaller chunks."
+  echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890 -g > script.sh"
+  echo "          ./script.sh"
   echo " --output Specify level of output"
   echo "          all         - CSV and summary"
   echo "          summary     - Summary only"
@@ -60,13 +64,14 @@ ORG_SCAN_ACCOUNT=""
 PRINT_CSV_DETAILS="true"
 PRINT_CSV_HEADER="true"
 PRINT_SUMMARY="true"
+GENERATE_SCRIPT="false"
 
 ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:o:r:a:-:" opt; do
+while getopts ":p:o:r:a:-:g" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -77,16 +82,17 @@ while getopts ":p:o:r:a:-:" opt; do
     a )
       ORG_SCAN_ACCOUNT=$OPTARG
       ;;
+    g )
+      GENERATE_SCRIPT="true"
+      ;;
     r )
-      REGIONS=$(echo $OPTARG | sed "s/,/ /g")
+      REGIONS=$OPTARG
       ;;
     -)
         case "${OPTARG}" in
             #Default configuration is to print CSV and summary. This section overrides those settings as needed
             output)
                 output="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                echo $output
-                echo $OPTIND
                 case "${output}" in
                   csv)
                     PRINT_SUMMARY="false"
@@ -276,7 +282,7 @@ function calculateInventory {
   then
     printf "$account_name, $accountid,"
   fi
-  local regionsToScan=$REGIONS
+  local regionsToScan=$(echo $REGIONS | sed "s/,/ /g")
   if [ -z "$regionsToScan" ]
   then
       # Regions to scan not set, get list from AWS
@@ -292,36 +298,36 @@ function calculateInventory {
     instances=$(getEC2Instances "$profile_string" "$r")
     if [[ $instances < 0 ]]
     then
-      printf " (ERROR: No access)"
-      break
+      printf " (ERROR: No access to $r)"
+    else
+      EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
+      accountEC2Instances=$(($accountEC2Instances + $instances))
+
+      ec2vcpu=$(getEC2InstacevCPUs "$profile_string" "$r")
+      EC2_INSTANCE_VCPU=$(($EC2_INSTANCE_VCPU + $ec2vcpu))
+      accountEC2vCPUs=$(($accountEC2vCPUs + $ec2vcpu))
+
+      ecsfargateclusters=$(getECSFargateClusters "$profile_string" "$r")
+      ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
+      ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
+      accountECSFargateClusters=$(($accountECSFargateClusters + $ecsfargateclusterscount))
+
+      ecsfargaterunningtasks=$(getECSFargateRunningTasks "$profile_string" "$r" "$ecsfargateclusters")
+      ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
+      accountECSFargateRunningTasks=$(($accountECSFargateRunningTasks + $ecsfargaterunningtasks))
+
+      ecsfargatecpu=$(getECSFargateRunningCPUs "$profile_string" "$r" "$ecsfargateclusters")
+      ECS_FARGATE_CPUS=$(($ECS_FARGATE_CPUS + $ecsfargatecpu))
+      accountECSFargateCPUs=$(($accountECSFargateCPUs + $ecsfargatecpu))
+
+      lambdafunctions=$(getLambdaFunctions "$profile_string" "$r")
+      LAMBDA_FUNCTIONS=$(($LAMBDA_FUNCTIONS + $lambdafunctions))
+      accountLambdaFunctions=$(($accountLambdaFunctions + $lambdafunctions))
+
+      lambdamemory=$(getLambdaFunctionMemory "$profile_string" "$r")
+      LAMBDA_MEMORY_TOTAL=$(($LAMBDA_MEMORY_TOTAL + $lambdamemory))
+      accountLambdaMemory=$(($accountLambdaMemory + $lambdamemory))
     fi
-    EC2_INSTANCES=$(($EC2_INSTANCES + $instances))
-    accountEC2Instances=$(($accountEC2Instances + $instances))
-
-    ec2vcpu=$(getEC2InstacevCPUs "$profile_string" "$r")
-    EC2_INSTANCE_VCPU=$(($EC2_INSTANCE_VCPU + $ec2vcpu))
-    accountEC2vCPUs=$(($accountEC2vCPUs + $ec2vcpu))
-
-    ecsfargateclusters=$(getECSFargateClusters "$profile_string" "$r")
-    ecsfargateclusterscount=$(echo $ecsfargateclusters | wc -w | xargs)
-    ECS_FARGATE_CLUSTERS=$(($ECS_FARGATE_CLUSTERS + $ecsfargateclusterscount))
-    accountECSFargateClusters=$(($accountECSFargateClusters + $ecsfargateclusterscount))
-
-    ecsfargaterunningtasks=$(getECSFargateRunningTasks "$profile_string" "$r" "$ecsfargateclusters")
-    ECS_FARGATE_RUNNING_TASKS=$(($ECS_FARGATE_RUNNING_TASKS + $ecsfargaterunningtasks))
-    accountECSFargateRunningTasks=$(($accountECSFargateRunningTasks + $ecsfargaterunningtasks))
-
-    ecsfargatecpu=$(getECSFargateRunningCPUs "$profile_string" "$r" "$ecsfargateclusters")
-    ECS_FARGATE_CPUS=$(($ECS_FARGATE_CPUS + $ecsfargatecpu))
-    accountECSFargateCPUs=$(($accountECSFargateCPUs + $ecsfargatecpu))
-
-    lambdafunctions=$(getLambdaFunctions "$profile_string" "$r")
-    LAMBDA_FUNCTIONS=$(($LAMBDA_FUNCTIONS + $lambdafunctions))
-    accountLambdaFunctions=$(($accountLambdaFunctions + $lambdafunctions))
-
-    lambdamemory=$(getLambdaFunctionMemory "$profile_string" "$r")
-    LAMBDA_MEMORY_TOTAL=$(($LAMBDA_MEMORY_TOTAL + $lambdamemory))
-    accountLambdaMemory=$(($accountLambdaMemory + $lambdamemory))
   done
 
   accountECSFargatevCPUs=$(($accountECSFargateCPUs / 1024))
@@ -367,11 +373,6 @@ function textoutput {
   echo "----------------------------"
   echo "= Total vCPUs:          $TOTAL_VCPUS"
 }
-
-if [[ $PRINT_CSV_HEADER == "true" ]]
-then
-  echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
-fi
 
 function analyzeOrganization {
     local org_profile_string=$1
@@ -421,42 +422,110 @@ function analyzeOrganizationAccount {
   fi
 }
 
-if [ -n "$ORG_ACCESS_ROLE" ]
-then
-    for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
-    do
-        ORGANIZATIONS=$(($ORGANIZATIONS + 1))
-        PROFILE_STRING="--profile $PROFILE"
-        analyzeOrganization "$PROFILE_STRING"
-    done
+function runAnalysis {
+  if [[ $PRINT_CSV_HEADER == "true" ]]
+  then
+    echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+  fi
 
-    if [ -z "$PROFILE" ]
-    then
-        ORGANIZATIONS=1
-        analyzeOrganization ""
-    fi
+  if [ -n "$ORG_ACCESS_ROLE" ]
+  then
+      for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+      do
+          ORGANIZATIONS=$(($ORGANIZATIONS + 1))
+          PROFILE_STRING="--profile $PROFILE"
+          analyzeOrganization "$PROFILE_STRING"
+      done
+
+      if [ -z "$PROFILE" ]
+      then
+          ORGANIZATIONS=1
+          analyzeOrganization ""
+      fi
+  else
+      for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+      do
+          # Profile set
+          PROFILE_STRING="--profile $PROFILE"
+          ACCOUNTS=$(($ACCOUNTS + 1))
+          calculateInventory "$PROFILE" "$PROFILE_STRING"
+      done
+
+      if [ -z "$PROFILE" ]
+      then
+          # No profile argument, run AWS CLI default
+          ACCOUNTS=1
+          calculateInventory "" ""
+      fi
+  fi
+
+  ECS_FARGATE_VCPUS=$(($ECS_FARGATE_CPUS / 1024))
+  LAMBDA_VCPUS=$(($LAMBDA_MEMORY_TOTAL / 1024))
+  TOTAL_VCPUS=$(($EC2_INSTANCE_VCPU + $ECS_FARGATE_VCPUS + $LAMBDA_VCPUS))
+
+  if [[ $PRINT_SUMMARY == "true" ]]
+  then
+    textoutput
+  fi
+}
+
+function generateOrganizationScript {
+  local profile=$1
+  local cliProfileString=$2
+  local regionString=$3
+  local output=$4
+  local orgMasterAccountID=$(getAccountId "$cliProfileString")
+  local accounts=$(aws $cliProfileString organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
+
+  for account in $(echo $accounts | jq -r '.Id')
+  do
+      if [[ $orgMasterAccountID == $account ]]
+      then
+        echo "$0 $profile  $regionString --output $output" 
+      else
+        echo "$0 $profile -o $ORG_ACCESS_ROLE -a $account $regionString --output $output" 
+      fi
+      output="csvnoheader"
+  done
+}
+
+function generateScript {
+  local scriptRegions=""
+  if [ -n "$REGIONS" ]
+  then
+    scriptRegions="-r $REGIONS"
+  fi
+  if [ -n "$ORG_ACCESS_ROLE" ]
+  then
+      local o="csv"
+      for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+      do
+        generateOrganizationScript "-p $PROFILE" "--profile $PROFILE" "$scriptRegions" "$o"
+        o="csvnoheader"
+      done
+
+      if [ -z "$PROFILE" ]
+      then
+        generateOrganizationScript "" "" "$scriptRegions" "csv"
+      fi
+  else
+      local o="csv"
+      for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
+      do
+        echo "$0 $regionString -p $PROFILE $scriptRegions --output $o" 
+        o="csvnoheader"
+      done
+
+      if [ -z "$PROFILE" ]
+      then
+        echo "$0 $regionString $scriptRegions --output csv" 
+      fi
+  fi
+}
+
+if [[ $GENERATE_SCRIPT == "true" ]]
+then
+  generateScript
 else
-    for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
-    do
-        # Profile set
-        PROFILE_STRING="--profile $PROFILE"
-        ACCOUNTS=$(($ACCOUNTS + 1))
-        calculateInventory "$PROFILE" "$PROFILE_STRING"
-    done
-
-    if [ -z "$PROFILE" ]
-    then
-        # No profile argument, run AWS CLI default
-        ACCOUNTS=1
-        calculateInventory "" ""
-    fi
-fi
-
-ECS_FARGATE_VCPUS=$(($ECS_FARGATE_CPUS / 1024))
-LAMBDA_VCPUS=$(($LAMBDA_MEMORY_TOTAL / 1024))
-TOTAL_VCPUS=$(($EC2_INSTANCE_VCPU + $ECS_FARGATE_VCPUS + $LAMBDA_VCPUS))
-
-if [[ $PRINT_SUMMARY == "true" ]]
-then
-  textoutput
+  runAnalysis
 fi
