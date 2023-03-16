@@ -44,9 +44,10 @@ function showHelp {
   echo "          This would leverage the cross-account role defined using the -o parameter to only"
   echo "          scan an individual account within an AWS organisation."
   echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890"
-  echo " -g       Generates a script that calls this script for each account / profile given. Useful for"
-  echo "          analyzing AWS organizations with many accounts to break up the analysis in smaller chunks."
-  echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890 -g > script.sh"
+  echo " -g       Specifies a script to be generated that contains a call for each account to be analyzed."
+  echo "          This is useful for analyzing AWS organizations with many accounts to break up the analysis"
+  echo "          into smaller chunks."
+  echo "          ./lw_aws_inventory.sh -o OrganizationAccountAccessRole -a 1234567890 -g script.sh"
   echo "          ./script.sh"
   echo " --output Specify level of output"
   echo "          all         - CSV and summary"
@@ -64,14 +65,16 @@ ORG_SCAN_ACCOUNT=""
 PRINT_CSV_DETAILS="true"
 PRINT_CSV_HEADER="true"
 PRINT_SUMMARY="true"
-GENERATE_SCRIPT="false"
+GENERATE_SCRIPT=""
 
 ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
+CSV_HEADER="\"Profile\", \"Account ID\", \"Regions\", \"EC2 Instances\", \"EC2 vCPUs\", \"ECS Fargate Clusters\", \"ECS Fargate Running Containers/Tasks\", \"ECS Fargate CPU Units\", \"ECS Fargate License vCPUs\", \"Lambda Functions\", \"MB Lambda Memory\", \"Lambda License vCPUs\", \"Total vCPUSs\""
+
 # Usage: ./lw_aws_inventory.sh
-while getopts ":p:o:r:a:-:g" opt; do
+while getopts ":p:o:r:a:-:g:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
@@ -83,7 +86,7 @@ while getopts ":p:o:r:a:-:g" opt; do
       ORG_SCAN_ACCOUNT=$OPTARG
       ;;
     g )
-      GENERATE_SCRIPT="true"
+      GENERATE_SCRIPT=$OPTARG
       ;;
     r )
       REGIONS=$OPTARG
@@ -425,7 +428,7 @@ function analyzeOrganizationAccount {
 function runAnalysis {
   if [[ $PRINT_CSV_HEADER == "true" ]]
   then
-    echo "Profile", "Account ID", "Regions", "EC2 Instances", "EC2 vCPUs", "ECS Fargate Clusters", "ECS Fargate Running Containers/Tasks", "ECS Fargate CPU Units", "ECS Fargate License vCPUs", "Lambda Functions", "MB Lambda Memory", "Lambda License vCPUs", "Total vCPUSs"
+    echo $CSV_HEADER
   fi
 
   if [ -n "$ORG_ACCESS_ROLE" ]
@@ -473,7 +476,6 @@ function generateOrganizationScript {
   local profile=$1
   local cliProfileString=$2
   local regionString=$3
-  local output=$4
   local orgMasterAccountID=$(getAccountId "$cliProfileString")
   local accounts=$(aws $cliProfileString organizations list-accounts | jq -c '.Accounts[]' | jq -c '{Id, Name}')
 
@@ -481,15 +483,20 @@ function generateOrganizationScript {
   do
       if [[ $orgMasterAccountID == $account ]]
       then
-        echo "$0 $profile  $regionString --output $output" 
+        echo "$0 $profile  $regionString --output csvnoheader"  >> $GENERATE_SCRIPT
       else
-        echo "$0 $profile -o $ORG_ACCESS_ROLE -a $account $regionString --output $output" 
+        echo "$0 $profile -o $ORG_ACCESS_ROLE -a $account $regionString --output csvnoheader"  >> $GENERATE_SCRIPT
       fi
-      output="csvnoheader"
   done
 }
 
 function generateScript {
+  echo Generating script $GENERATE_SCRIPT
+
+  echo "#!/bin/bash" > $GENERATE_SCRIPT
+  echo "echo $CSV_HEADER" >> $GENERATE_SCRIPT
+  chmod +x $GENERATE_SCRIPT
+
   local scriptRegions=""
   if [ -n "$REGIONS" ]
   then
@@ -497,33 +504,29 @@ function generateScript {
   fi
   if [ -n "$ORG_ACCESS_ROLE" ]
   then
-      local o="csv"
       for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
       do
-        generateOrganizationScript "-p $PROFILE" "--profile $PROFILE" "$scriptRegions" "$o"
-        o="csvnoheader"
+        generateOrganizationScript "-p $PROFILE" "--profile $PROFILE" "$scriptRegions"
       done
 
       if [ -z "$PROFILE" ]
       then
-        generateOrganizationScript "" "" "$scriptRegions" "csv"
+        generateOrganizationScript "" "" "$scriptRegions"
       fi
   else
-      local o="csv"
       for PROFILE in $(echo $AWS_PROFILE | sed "s/,/ /g")
       do
-        echo "$0 $regionString -p $PROFILE $scriptRegions --output $o" 
-        o="csvnoheader"
+        echo "$0 $regionString -p $PROFILE $scriptRegions --output csvnoheader" >> $GENERATE_SCRIPT
       done
 
       if [ -z "$PROFILE" ]
       then
-        echo "$0 $regionString $scriptRegions --output csv" 
+        echo "$0 $regionString $scriptRegions --output csvnoheader"  >> $GENERATE_SCRIPT
       fi
   fi
 }
 
-if [[ $GENERATE_SCRIPT == "true" ]]
+if [[ -n $GENERATE_SCRIPT ]]
 then
   generateScript
 else
