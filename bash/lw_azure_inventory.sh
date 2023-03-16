@@ -34,13 +34,20 @@ function removeMap {
   fi
 }
 
-function installResourceGraphIfNotPresent {
+function installExtensions {
   resourceGraphPresent=$(az extension list -o json  --query "contains([].name, \`resource-graph\`)")
   if [ "$resourceGraphPresent" != true ] ; then
-    echo "resource-graph extension not present in Az CLI installation. Enabling..."
+    echo "Resource-graph extension not present in Az CLI installation. Enabling..."
     az extension add --name "resource-graph"
   else
-    echo "resource-graph extension already present..."
+    echo "Resource-graph extension already present..."
+  fi
+  accountPresent=$(az extension list -o json  --query "contains([].name, \`account\`)")
+  if [ "$accountPresent" != true ] ; then
+    echo "Account extension not present in Az CLI installation. Enabling..."
+    az extension add --name "account"
+  else
+    echo "Account extension already present..."
   fi
 }
 
@@ -55,7 +62,7 @@ AZURE_VMSS_VCPU=0
 AZURE_VMSS_VM_COUNT=0
 AZURE_VMSS_COUNT=0
 
-installResourceGraphIfNotPresent
+installExtensions
 
 echo "Building Azure VM SKU to vCPU map..."
 az vm list-skus --resource-type virtualmachines -o json |\
@@ -139,7 +146,6 @@ function runAnalysis {
   do
     local foundSubscriptionId=$(echo $expectedSubscriptions | jq -r  --arg subscriptionId "$actualSubscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | .subscriptionId')
     if [ "$actualSubscriptionId" != "$foundSubscriptionId" ]; then
-      #echo $actualSubscriptionId not found, dig deeper!
       runSubscriptionAnalysis $actualSubscriptionId "" "$vms" "$vmss"
     fi
   done
@@ -148,7 +154,6 @@ function runAnalysis {
   for expectedSubscriptionId in $expectedSubscriptionIds
   do
     local subscriptionName=$(echo $expectedSubscriptions | jq -r  --arg subscriptionId "$expectedSubscriptionId" '.data[] | select(.subscriptionId==$subscriptionId) | .name')
-    #echo $expectedSubscriptionId: $subscriptionName
     runSubscriptionAnalysis $expectedSubscriptionId "$subscriptionName" "$vms" "$vmss"
   done
 }
@@ -160,7 +165,9 @@ if [[ ! -z "$MANAGEMENT_GROUP" ]]; then
 elif [[ ! -z "$SUBSCRIPTION" ]]; then
   runAnalysis "--subscriptions ${SUBSCRIPTION//,/ }"
 else
-  runAnalysis ""
+  echo "Load all subscriptions available to user"
+  subscriptions=$(az account subscription list -o json | jq -r '.[] | .subscriptionId')
+  runAnalysis "--subscriptions $subscriptions"
 fi
 
 echo "##########################################"
