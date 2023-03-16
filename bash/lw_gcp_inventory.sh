@@ -1,12 +1,44 @@
 #!/bin/bash
 
-set -o errexit
-set -o pipefail
-
-# Script to fetch GCP inventory for Lacework sizing.
+# Run ./lw_gcp_inventory.sh -h for help on how to run the script.
+# Or just read the text in showHelp below.
 # Requirements: gcloud, jq
 
-# This script can be run from Google Cloud Shell.
+function showHelp {
+  echo "lw_gcp_inventory.sh is a tool for estimating license vCPUs in a GCP environment, based on folder,"
+  echo "project or organization level. It leverages the gcp CLI and by default analyzes all project a user"
+  echo "has access to. The script provides output in a CSV format to be imported into a spreadsheet, as"
+  echo "well as an easy-to-read summary."
+  echo ""
+  echo "By default, the script will scan all projects returned by the following command:"
+  echo "gcloud projects list"
+  echo ""
+  echo "Note the following about the script:"
+  echo "* Works great in a cloud shell"
+  echo "* It has been verified to work on Mac and Linux based systems"
+  echo "* Has been observed to work with Windows Subsystem for Linux to run on Windows"
+  echo "* Run using the following syntax: ./lw_gcp_inventory.sh, sh lw_gcp_inventory.sh will not work"
+  echo ""
+  echo "Available flags:"
+  echo " -p       Comma separated list of GCP projects to scan."
+  echo "          ./lw_gcp_inventory.sh -p project-1,project-2"
+  echo " -f       Comma separated list of GCP folders to scan."
+  echo "          ./lw_gcp_inventory.sh -p 1234,456"
+  echo " -o       Comma separated list of GCP organizations to scan."
+  echo "          ./lw_gcp_inventory.sh -o 1234,456"
+}
+
+#Ensure the script runs with the BASH shell
+echo $BASH | grep -q "bash"
+if [ $? -ne 0 ]
+then
+  echo The script is running using the incorrect shell.
+  echo Use ./lw_gcp_inventory.sh to run the script using the required shell, bash.
+  exit
+fi
+
+set -o errexit
+set -o pipefail
 
 while getopts ":f:o:p:" opt; do
   case ${opt} in
@@ -20,11 +52,11 @@ while getopts ":f:o:p:" opt; do
       PROJECTS=$OPTARG
       ;;
     \? )
-      printf "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
+      showHelp
       exit 1
       ;;
     : )
-      printf "Usage: ./lw_gcp_inventory.sh [-f folder] [-o organization] [-p project] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
+      showHelp
       exit 1
       ;;
   esac

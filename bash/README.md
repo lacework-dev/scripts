@@ -5,9 +5,10 @@ Script for estimating license vCPUs in an AWS environment. It leverages the AWS 
 
 Note the following about the script:
 * It requires AWS CLI v2 to run
-* It does not work on Windows
-* It has only been verified to work on Mac and Linux based systems
+* It has been verified to work on Mac and Linux based systems
 * It works great in a cloud shell
+* It does not work on Windows (Cygwin), but has been observed to work with Windows Subsystem for Linux.
+* Run using the following syntax: ./lw_aws_inventory.sh, sh lw_aws_inventory.sh will not work
 
 The output from running the script can look as follows:
 ```
@@ -59,7 +60,7 @@ The following options can be used to modify how the script is run:
 ```
 ### Scan all accounts in an AWS Organization
 ```
-./lw_aws_inventory.sh -o
+./lw_aws_inventory.sh -o OrganizationAccountAccessRole
 ```
 This will leverage the OrganizationAccountAccessRole to scan all accounts in an organization.
 
