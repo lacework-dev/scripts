@@ -4,6 +4,39 @@
 # Requirements: az cli, jq, cut, grep
 
 # This script can be run from Azure Cloud Shell.
+# Run ./lw_azure_inventory.sh -h for help on how to run the script.
+# Or just read the text in showHelp below.
+
+function showHelp {
+  echo "lw_azure_inventory.sh is a tool for estimating license vCPUs in an Azure environment, based on"
+  echo "subscription or management group level. It leverages the az CLI and by default analyzes all"
+  echo "subscriptions a user has access to. The script provides output in a CSV format to be imported"
+  echo "into a spreadsheet, as well as an easy-to-read summary."
+  echo ""
+  echo "By default, the script will scan all subscriptions returned by the following command:"
+  echo "az account subscription list"
+  echo ""
+  echo "Note the following about the script:"
+  echo "* Works great in a cloud shell"
+  echo "* It has been verified to work on Mac and Linux based systems"
+  echo "* Has been observed to work with Windows Subsystem for Linux to run on Windows"
+  echo "* Run using the following syntax: ./lw_azure_inventory.sh, sh lw_azure_inventory.sh will not work"
+  echo ""
+  echo "Available flags:"
+  echo " -s       Comma separated list of Azure subscriptions to scan."
+  echo "          ./lw_azure_inventory.sh -p subscription-1,subscription-2"
+  echo " -m       Comma separated list of Azure management groups to scan."
+  echo "          ./lw_azure_inventory.sh -m 1234,456"
+}
+
+#Ensure the script runs with the BASH shell
+echo $BASH | grep -q "bash"
+if [ $? -ne 0 ]
+then
+  echo The script is running using the incorrect shell.
+  echo Use ./lw_azure_inventory.sh to run the script using the required shell, bash.
+  exit
+fi
 
 set -o errexit
 set -o pipefail
@@ -17,11 +50,11 @@ while getopts ":m:s:" opt; do
       MANAGEMENT_GROUP=$OPTARG
       ;;
     \? )
-      printf "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
+      showHelp
       exit 1
       ;;
     : )
-      printf "Usage: ./lw_azure_inventory.sh [-m management_group] [-s subscription] \nAny single scope can have multiple values comma delimited, but multiple scopes cannot be defined.\n" 1>&2
+      showHelp
       exit 1
       ;;
   esac
