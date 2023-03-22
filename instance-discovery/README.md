@@ -8,7 +8,8 @@ Supports GCP & AWS. Azure VM support present, but not comprehensive for VMSS. In
 
 ## How to Run
 
-`docker run -v ~/.lacework.toml:/home/user/.lacework.toml <repo>/instance-discovery --json`
+`docker run -v ~/.lacework.toml:/home/user/.lacework.toml valerianjone807/instance-discovery --json`
+`docker run -v ~/.lacework.toml:/home/user/.lacework.toml valerianjone807/instance-discovery --csv --profile <lacework profile> > whitespace-report.csv`
 
 ``` python
 pip install -r requirements.txt
