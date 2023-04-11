@@ -30,9 +30,20 @@ func Run(subscriptionsToIgnore []string, debug bool) {
 			setSubscription(subscription)
 			standardAgents := getStandardAgents()
 			enterpriseAgents := getEntepriseAgents()
+			scaleSets := getVMScaleSet()
+			rgs := getResourceGroups()
+			for _, group := range rgs {
+				getContainers(group)
+			}
 
 			var locations []string
 			for _, vm := range standardAgents {
+				if !helpers.Contains(locations, vm.Location) {
+					locations = append(locations, vm.Location)
+				}
+			}
+
+			for _, vm := range scaleSets {
 				if !helpers.Contains(locations, vm.Location) {
 					locations = append(locations, vm.Location)
 				}
@@ -50,35 +61,65 @@ func Run(subscriptionsToIgnore []string, debug bool) {
 			}
 
 			var standardAgentsWithvCPU []VMInfo
+			var vmvCPU int32
 			for _, vm := range standardAgents {
 				for _, size := range vmSizes {
 					if vm.Location == size.Location && vm.VMSize == size.Name {
 						vm.vCPUs = size.vCPUs
+						vmvCPU += vm.vCPUs
 						totalVCPUs += size.vCPUs
 						standardAgentsWithvCPU = append(standardAgentsWithvCPU, vm)
 					}
 				}
 			}
 
+			var scaleSetsWithvCPU []VMInfo
+			var scalesetvCPU int32
+			for _, vm := range scaleSets {
+				for _, size := range vmSizes {
+					if vm.Location == size.Location && vm.VMSize == size.Name {
+						vm.vCPUs = size.vCPUs * vm.Quantity
+						scalesetvCPU += vm.vCPUs
+						totalVCPUs += vm.vCPUs
+						scaleSetsWithvCPU = append(scaleSetsWithvCPU, vm)
+					}
+				}
+			}
+
 			var enterpriseAgentsWithvCPU []VMInfo
+			var k8svCPU int32
 			for _, vm := range enterpriseAgents {
 				for _, size := range vmSizes {
 					if vm.Location == size.Location && vm.VMSize == size.Name {
 						vm.vCPUs = size.vCPUs
+						k8svCPU += vm.vCPUs
 						totalVCPUs += size.vCPUs
 						enterpriseAgentsWithvCPU = append(enterpriseAgentsWithvCPU, vm)
 					}
 				}
 			}
 
-			fmt.Println("VM vCPU Counts", len(standardAgentsWithvCPU))
-			fmt.Println("Container vCPU Counts", len(enterpriseAgentsWithvCPU))
+			fmt.Println("VM Counts", len(standardAgentsWithvCPU))
+			fmt.Println("VM Scale Set Counts", len(scaleSetsWithvCPU))
+			fmt.Println("AKS Counts", len(enterpriseAgentsWithvCPU))
+
+			fmt.Println("\nVM vCPU Counts", vmvCPU)
+			fmt.Println("VM Scale Set vCPU Counts", scalesetvCPU)
+			fmt.Println("AKS vCPU Counts", k8svCPU)
 
 			for _, vm := range standardAgentsWithvCPU {
 				if vm.OS == "Linux" {
 					subscriptionVMOSCounts.Linux++
 				} else {
 					subscriptionVMOSCounts.Windows++
+				}
+			}
+
+			for _, vm := range scaleSetsWithvCPU {
+				if vm.OS == "Linux" {
+					subscriptionVMOSCounts.Linux += vm.Quantity
+				} else {
+					subscriptionVMOSCounts.Windows += vm.Quantity
 				}
 			}
 
@@ -106,7 +147,7 @@ func Run(subscriptionsToIgnore []string, debug bool) {
 	fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
 	fmt.Printf("Windows VMs %d\n", vmOSCounts.Windows)
 
-	fmt.Println("\nNumber of Azure subscriptions inventoried", subscriptionsInventoried)
+	fmt.Println("\nNumber of Azure subscriptions Inventoried", subscriptionsInventoried)
 	fmt.Println("----------------------------------------------")
 }
 
@@ -116,11 +157,12 @@ type VMInfo struct {
 	Location string
 	vCPUs    int32
 	VMSize   string
+	Quantity int32
 }
 
 type OSCounts struct {
-	Windows int
-	Linux   int
+	Windows int32
+	Linux   int32
 }
 
 type MachineType struct {
@@ -241,6 +283,106 @@ func setSubscription(subscription string) bool {
 	}
 
 	return true
+}
+
+type getResourceGroupList struct {
+	Name string `json:"name"`
+}
+
+func getResourceGroups() []string {
+	buf := bytes.NewBuffer([]byte{})
+
+	cmd := exec.Command("az", "group", "list")
+	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		helpers.Bail("error running az group list", err)
+	}
+
+	response := []getResourceGroupList{}
+	if err := json.NewDecoder(buf).Decode(&response); err != nil {
+		helpers.Bail("Error decoding groups json", err)
+	}
+
+	var groups []string
+	for _, group := range response {
+		groups = append(groups, group.Name)
+	}
+
+	return groups
+}
+
+type getContainerListResponse struct {
+	Containers []struct {
+		Resources struct {
+			Requests struct {
+				CPU float32 `json:"cpu"`
+			} `json:"requests"`
+		} `json:"resources"`
+	} `json:"containers"`
+	Location string `json:"location"`
+	OSType   string `json:"osType"`
+}
+
+func getContainers(resourceGroup string) []VMInfo {
+	buf := bytes.NewBuffer([]byte{})
+
+	cmd := exec.Command("az", "container", "list", "-g", resourceGroup)
+	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		helpers.Bail("error running az container list", err)
+	}
+
+	response := []getContainerListResponse{}
+	if err := json.NewDecoder(buf).Decode(&response); err != nil {
+		helpers.Bail("Error decoding container json", err)
+	}
+
+	var vms = []VMInfo{}
+	for _, containers := range response {
+		for _, container := range containers.Containers {
+			vms = append(vms, VMInfo{Location: containers.Location, OS: containers.OSType, vCPUs: int32(container.Resources.Requests.CPU)})
+		}
+	}
+	return vms
+}
+
+type getVMScaleSetResponse struct {
+	SKU struct {
+		Capacity int32  `json:"capacity"`
+		Name     string `json:"name"`
+	} `json:"sku"`
+	VirtualMachineProfile struct {
+		StorageProfile struct {
+			OSDisk struct {
+				OSType string `json:"osType"`
+			} `json:"osDisk"`
+		}
+	} `json:"virtualMachineProfile"`
+	Location string `json:"location"`
+}
+
+func getVMScaleSet() []VMInfo {
+	buf := bytes.NewBuffer([]byte{})
+
+	cmd := exec.Command("az", "vmss", "list")
+	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		helpers.Bail("error running az vmss list", err)
+	}
+
+	response := []getVMScaleSetResponse{}
+	if err := json.NewDecoder(buf).Decode(&response); err != nil {
+		helpers.Bail("Error decoding scalesets json", err)
+	}
+
+	var vms = []VMInfo{}
+	for _, ss := range response {
+		vms = append(vms, VMInfo{OS: ss.VirtualMachineProfile.StorageProfile.OSDisk.OSType, ID: "", Location: ss.Location, VMSize: ss.SKU.Name, Quantity: ss.SKU.Capacity})
+	}
+	return vms
 }
 
 type getVMsListResponse struct {

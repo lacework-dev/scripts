@@ -3,21 +3,21 @@ package lwaws
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/lacework-dev/scripts/lw-inventory/helpers"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"math"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
-	"github.com/lacework-dev/scripts/lw-inventory/helpers"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 type InstanceType struct {
@@ -49,6 +49,14 @@ type ContainerClusterInfo struct {
 	AccountId     string
 }
 
+type LambdaInfo struct {
+	Region    string
+	Name      string
+	Memory    int32
+	vCPU      float64
+	AccountId string
+}
+
 const (
 	FARGATE_RUNNING_CONTAINERS = "Fargate Running Containers"
 )
@@ -65,6 +73,7 @@ func Run(profiles []string, regions []string, debug bool) {
 	accountVMVCPUS := make(map[string]int32)
 	totalAccountvCPUS := make(map[string]int32)
 	accountContainerVCPUS := make(map[string]int32)
+	accountLambdaVCPUS := make(map[string]int32)
 	var totalVMOSCounts OSCounts
 
 	for _, p := range profiles {
@@ -80,13 +89,13 @@ func Run(profiles []string, regions []string, debug bool) {
 		instanceTypes := getInstanceTypes(p, regions)
 		ec2InstanceInfo := getEC2Instances(p, regions)
 		containerInfo := getContainerInfo(p, regions)
-
-		//allVMs = append(allVMs, ec2InstanceInfo...)
+		lambdaInfo := getLambdaInfo(p, regions)
 
 		var vmOSCounts OSCounts
 		var accountIds []string
 		var vmAccountData = make(map[string][]EC2VMInfo)
 		var containervCPUData = make(map[string]float64)
+		var lambdavCPUData = make(map[string]float64)
 		for _, vm := range ec2InstanceInfo {
 			for _, it := range instanceTypes {
 				if it.Region == vm.Region && it.Name == vm.InstanceType {
@@ -110,6 +119,10 @@ func Run(profiles []string, regions []string, debug bool) {
 			containervCPUData[container.AccountId] = containervCPUData[container.AccountId] + container.vCPU
 		}
 
+		for _, lambda := range lambdaInfo {
+			lambdavCPUData[lambda.AccountId] = lambdavCPUData[lambda.AccountId] + lambda.vCPU
+		}
+
 		totalVMOSCounts.Linux += vmOSCounts.Linux
 		totalVMOSCounts.Windows += vmOSCounts.Windows
 
@@ -128,6 +141,13 @@ func Run(profiles []string, regions []string, debug bool) {
 			totalvCPU += vcpus
 		}
 
+		for account, vcpu := range containervCPUData {
+			vcpus := int32(math.Round(vcpu))
+			accountLambdaVCPUS[account] += vcpus
+			totalAccountvCPUS[account] += vcpus
+			totalvCPU += vcpus
+		}
+
 		fmt.Println("----------------------------------------------")
 		fmt.Printf("AWS vCPUs %d for profile %s\n", totalvCPU, p)
 
@@ -139,7 +159,10 @@ func Run(profiles []string, regions []string, debug bool) {
 		for account, vcpus := range accountContainerVCPUS {
 			fmt.Printf("Account Container vCPUs: %s - %d\n", account, vcpus)
 		}
-		fmt.Println("Lambda counts not available at this time")
+
+		for account, vcpus := range accountLambdaVCPUS {
+			fmt.Printf("Account Lambda vCPUs: %s - %d\n", account, vcpus)
+		}
 
 		fmt.Println("\nVM OS Counts")
 		fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
@@ -156,7 +179,11 @@ func Run(profiles []string, regions []string, debug bool) {
 	for account, vcpus := range totalAccountvCPUS {
 		fmt.Printf("Account: %s - %d\n", account, vcpus)
 	}
-	fmt.Println("Lambda counts not available at this time")
+
+	//for account, vcpus := range totalAccountvCPUS {
+	//	fmt.Printf("Account Lambda vCPUs: %s - %d\n", account, vcpus)
+	//}
+	//fmt.Println("Lambda counts not available at this time")
 
 	fmt.Println("\nVM OS Counts")
 	fmt.Printf("Linux VMs %d\n", totalVMOSCounts.Linux)
@@ -167,7 +194,7 @@ func Run(profiles []string, regions []string, debug bool) {
 }
 
 func getSession(profile string, region string) *aws.Config {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
+	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 		config.WithSharedConfigProfile(profile),
 		//config.WithDefaultsMode(aws.DefaultsModeInRegion),
@@ -185,7 +212,7 @@ func getSession(profile string, region string) *aws.Config {
 func getRegions(cfg aws.Config) []string {
 	service := ec2.NewFromConfig(cfg)
 	var regions []string
-	regionsResponse, err := service.DescribeRegions(context.TODO(), &ec2.DescribeRegionsInput{
+	regionsResponse, err := service.DescribeRegions(context.Background(), &ec2.DescribeRegionsInput{
 		AllRegions: aws.Bool(true),
 	})
 
@@ -207,15 +234,39 @@ func getRegions(cfg aws.Config) []string {
 	return regions
 }
 
+func getLambdas(cfg aws.Config, region string) []LambdaInfo {
+	service := lambda.NewFromConfig(cfg)
+	output := lambda.NewListFunctionsPaginator(service, &lambda.ListFunctionsInput{})
+
+	var lambdas []LambdaInfo
+	for output.HasMorePages() {
+		page, err := output.NextPage(context.Background())
+		if err != nil {
+			log.Errorln("getLambdas NewListFunctionsPaginator ", err)
+		} else {
+			for _, it := range page.Functions {
+				clusterPieces := strings.Split(*it.FunctionArn, ":")
+				lambdas = append(lambdas, LambdaInfo{
+					Region:    region,
+					Name:      *it.FunctionName,
+					Memory:    *it.MemorySize,
+					AccountId: clusterPieces[4],
+					vCPU:      float64(*it.MemorySize) / 1024,
+				})
+			}
+		}
+	}
+	return lambdas
+}
+
 func getInstanceTypesByRegion(cfg aws.Config, region string) []InstanceType {
 	var instanceTypes []InstanceType
-	//log.Println("aws cfg", cfg)
 
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstanceTypesPaginator(service, &ec2.DescribeInstanceTypesInput{})
 
 	for output.HasMorePages() {
-		page, err := output.NextPage(context.TODO())
+		page, err := output.NextPage(context.Background())
 		if err != nil {
 			log.Errorln("getInstanceTypes NewDescribeInstanceTypesPaginator ", region, err)
 			if strings.Contains(err.Error(), "credentials") {
@@ -223,7 +274,6 @@ func getInstanceTypesByRegion(cfg aws.Config, region string) []InstanceType {
 			}
 		} else {
 			for _, it := range page.InstanceTypes {
-				//fmt.Println(it.InstanceType, it.VCpuInfo.DefaultVCpus, region)
 				instanceTypes = append(instanceTypes, InstanceType{
 					Name:   fmt.Sprintf("%s", it.InstanceType),
 					vCPU:   *it.VCpuInfo.DefaultVCpus,
@@ -300,39 +350,11 @@ func getContainerInfo(profile string, regions []string) []ContainerClusterInfo {
 
 	for _, r := range regions {
 		cfg := getSession(profile, r)
-		//ECS Tasks
-		//numFuncs += 1
-		//go func(r string) {
-		//	channel <- getECSTaskDefinitionsByRegion(*cfg, r)
-		//}(r)
-		//
-		////Running Fargate Tasks
-		//numFuncs += 1
-		//go func(r string) {
-		//	channel <- getECSFargateRunningTasksByRegion(*cfg, r)
-		//}(r)
-
 		//Running Fargate Containers
 		numFuncs += 1
 		go func(r string) {
 			channel <- getECSFargateRunningContainersByRegion(*cfg, r)
 		}(r)
-
-		////Total Fargate Containers
-		//numFuncs += 1
-		//go func(r string) {
-		//	channel <- getECSFargateTotalContainersByRegion(*cfg, r)
-		//}(r)
-		//
-		//numFuncs += 1
-		//go func(r string) {
-		//	channel <- getEKSFargateActiveProfilesByRegion(*cfg, r)
-		//}(r)
-		//
-		//numFuncs += 1
-		//go func(r string) {
-		//	channel <- getECSFargateActiveServicesByRegion(*cfg, r)
-		//}(r)
 	}
 
 	for i := 0; i < numFuncs; i++ {
@@ -346,13 +368,41 @@ func getContainerInfo(profile string, regions []string) []ContainerClusterInfo {
 	return containerList
 }
 
+func getLambdaInfo(profile string, regions []string) []LambdaInfo {
+	log.Debugf("start getContainer\n")
+	start := time.Now()
+
+	numFuncs := 0
+	channel := make(chan []LambdaInfo)
+	var lambdasList []LambdaInfo
+
+	for _, r := range regions {
+		cfg := getSession(profile, r)
+
+		numFuncs += 1
+		go func(r string) {
+			channel <- getLambdas(*cfg, r)
+		}(r)
+	}
+
+	for i := 0; i < numFuncs; i++ {
+		containers := <-channel
+		lambdasList = append(lambdasList, containers...)
+	}
+
+	elapsed := time.Since(start)
+	log.Debugf("end getContainer - %s\n", elapsed)
+
+	return lambdasList
+}
+
 func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []ContainerClusterInfo {
 	service := ecs.NewFromConfig(cfg)
 	output := ecs.NewListClustersPaginator(service, &ecs.ListClustersInput{})
 
 	var allClusterInfo []ContainerClusterInfo
 	for output.HasMorePages() {
-		page, err := output.NextPage(context.TODO())
+		page, err := output.NextPage(context.Background())
 		if err != nil {
 			log.Errorln("getECSFargateRunningContainersByRegion ListClusters ", region, err)
 		} else {
@@ -361,14 +411,12 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 					Cluster: &cluster,
 				})
 				for output.HasMorePages() {
-					//var clusterInfo ContainerClusterInfo
-					//clusterInfo.ClusterName = page.
-					page, err := output.NextPage(context.TODO())
+					page, err := output.NextPage(context.Background())
 					if err != nil {
 						log.Errorln("getECSFargateRunningContainersByRegion ListTasks ", region, err)
 					} else {
 						if len(page.TaskArns) > 0 {
-							outputDT, err := service.DescribeTasks(context.TODO(), &ecs.DescribeTasksInput{
+							outputDT, err := service.DescribeTasks(context.Background(), &ecs.DescribeTasksInput{
 								Cluster: &cluster,
 								Tasks:   page.TaskArns,
 							})
@@ -381,7 +429,6 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 											if ecsTypes.DesiredStatus(*c.LastStatus) == ecsTypes.DesiredStatusRunning {
 												vcpu, _ := strconv.ParseFloat(*t.Cpu, 32)
 												clusterPieces := strings.Split(cluster, ":")
-												//println(clusterPieces)
 												clusterInfo := ContainerClusterInfo{
 													Region:        region,
 													ContainerType: FARGATE_RUNNING_CONTAINERS,
@@ -405,131 +452,6 @@ func getECSFargateRunningContainersByRegion(cfg aws.Config, region string) []Con
 	return allClusterInfo
 }
 
-//func getContainerEC2Instances(profile string, regions []string) []EC2VMInfo {
-//	log.Debugf("start getContainerEC2Instances\n")
-//	start := time.Now()
-//
-//	numFuncs := 0
-//	channel := make(chan []EC2VMInfo)
-//	var serviceCountList []EC2VMInfo
-//	for _, r := range regions {
-//		cfg := getSession(profile, r)
-//		//ECS EC2s
-//		numFuncs += 1
-//		go func(r string) {
-//			channel <- getECSVMCountByRegion(cfg, r)
-//		}(r)
-//
-//		//EKS EC2s
-//		numFuncs += 1
-//		go func(r string) {
-//			channel <- getEKSVMCountByRegion(cfg, r)
-//		}(r)
-//	}
-//
-//	for i := 0; i < numFuncs; i++ {
-//		vms := <-channel
-//		serviceCountList = append(serviceCountList, vms...)
-//	}
-//
-//	elapsed := time.Since(start)
-//	log.Debugf("end getContainerEC2Instances - %s\n", elapsed)
-//
-//	return serviceCountList
-//}
-
-//func getEKSVMCountByRegion(cfg aws.Config, region string) []EC2VMInfo {
-//	service := eks.NewFromConfig(cfg)
-//	autoscalingService := autoscaling.NewFromConfig(cfg)
-//
-//	var instances []EC2VMInfo
-//	output, err := service.ListClusters(context.TODO(), &eks.ListClustersInput{})
-//
-//	if err != nil {
-//		log.Errorln("getEKSVMCountByRegion ListClusters ", region, err)
-//	} else {
-//		for _, cluster := range output.Clusters {
-//			output, err := service.ListNodegroups(context.TODO(), &eks.ListNodegroupsInput{
-//				ClusterName: &cluster,
-//			})
-//			if err != nil {
-//				log.Errorln("getEKSVMCountByRegion ListNodegroups ", region, err)
-//			} else {
-//				for _, nodegroup := range output.Nodegroups {
-//					output, err := service.DescribeNodegroup(context.TODO(), &eks.DescribeNodegroupInput{
-//						ClusterName:   &cluster,
-//						NodegroupName: &nodegroup,
-//					})
-//					if err != nil {
-//						log.Errorln("getEKSVMCountByRegion DescribeNodegroup ", region, err)
-//					} else {
-//						var asgNames []string
-//						for _, autoscalingGroup := range output.Nodegroup.Resources.AutoScalingGroups {
-//							asgNames = append(asgNames, *autoscalingGroup.Name)
-//						}
-//
-//						outputDASG, err := autoscalingService.DescribeAutoScalingGroups(context.TODO(), &autoscaling.DescribeAutoScalingGroupsInput{
-//							AutoScalingGroupNames: asgNames,
-//						})
-//
-//						if err != nil {
-//							log.Errorln("getEKSVMCountByRegion DescribeAutoScalingGroups ", region, err)
-//						} else {
-//							for _, asg := range outputDASG.AutoScalingGroups {
-//								for _, i := range asg.Instances {
-//									role := fmt.Sprintf("%s", *output.Nodegroup.NodeRole)
-//									instances = append(instances, EC2VMInfo{Region: region, AMI: *i.InstanceId, InstanceType: *i.InstanceType, AccountId: role[13:25]})
-//								}
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	return instances
-//}
-
-//func getECSVMCountByRegion(cfg aws.Config, region string) []EC2VMInfo {
-//	service := ecs.NewFromConfig(cfg)
-//	var instances []EC2VMInfo
-//	output, err := service.ListClusters(context.TODO(), &ecs.ListClustersInput{})
-//
-//	if err != nil {
-//		log.Errorln("getECSVMCountByRegion ListClusters ", region, err)
-//	} else {
-//		for _, cluster := range output.ClusterArns {
-//			output, err := service.ListContainerInstances(context.TODO(), &ecs.ListContainerInstancesInput{
-//				Cluster: &cluster,
-//			})
-//
-//			if err != nil {
-//				log.Errorln("getECSVMCountByRegion ListContainerInstances ", region, err)
-//			} else {
-//				for _, cia := range output.ContainerInstanceArns {
-//					output, err := service.DescribeContainerInstances(context.TODO(), &ecs.DescribeContainerInstancesInput{
-//						Cluster:            &cluster,
-//						ContainerInstances: []string{cia},
-//					})
-//
-//					if err != nil {
-//						log.Errorln("getECSVMCountByRegion DescribeContainerInstances ", region, err)
-//					} else {
-//						for _, i := range output.ContainerInstances {
-//							parts := strings.Split(*i.ContainerInstanceArn, ":")
-//							accountId := parts[4]
-//							instances = append(instances, EC2VMInfo{Region: region, AMI: *i.Ec2InstanceId, AccountId: accountId})
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	return instances
-//}
-
 func getEC2InstancesByRegion(cfg aws.Config, region string) []EC2VMInfo {
 	service := ec2.NewFromConfig(cfg)
 	output := ec2.NewDescribeInstancesPaginator(service, &ec2.DescribeInstancesInput{
@@ -539,7 +461,7 @@ func getEC2InstancesByRegion(cfg aws.Config, region string) []EC2VMInfo {
 	var instances []EC2VMInfo
 	for output.HasMorePages() {
 
-		page, err := output.NextPage(context.TODO())
+		page, err := output.NextPage(context.Background())
 		if err != nil {
 			log.Errorln("getEC2InstancesByRegion DescribeInstances ", region, err)
 		} else {
