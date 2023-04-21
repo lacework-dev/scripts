@@ -11,12 +11,16 @@
 
 AWS_PROFILE=default
 export AWS_MAX_ATTEMPTS=20
+REGIONS=""
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp::t" opt; do
+while getopts ":p:r:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
+      ;;
+    r )
+      REGIONS=$OPTARG
       ;;
     \? )
       echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
@@ -112,7 +116,14 @@ function calculateInventory {
   accountLambdaFunctions=0
 
   printf "$profile, $accountid, "
-  for r in $(getRegions); do
+  local regionsToScan=$(echo $REGIONS | sed "s/,/ /g")
+  if [ -z "$regionsToScan" ]
+  then
+      # Regions to scan not set, get list from AWS
+      regionsToScan=$(getRegions)
+  fi
+
+  for r in $regionsToScan; do
     printf "$r "
 
     instances=$(getInstances $r $profile)
