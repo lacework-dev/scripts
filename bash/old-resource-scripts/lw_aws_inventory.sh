@@ -2,21 +2,25 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
-# You can specify a profile with the -p flag
 # Note:
-# 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
+# 1. You can specify multiple accounts by passing a comma seperated list using the -p flag, e.g. "-p default,qa,test",
 # there are no spaces between accounts in the list
-# 2. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
+# 2. You can specify what regions to cscan by passing the -r flag, e.g. "-r us-east-1,us-east-2"
+# 3. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
 
 
 AWS_PROFILE=default
 export AWS_MAX_ATTEMPTS=20
+REGIONS=""
 
 # Usage: ./lw_aws_inventory.sh
-while getopts ":jp::t" opt; do
+while getopts ":p:r:" opt; do
   case ${opt} in
     p )
       AWS_PROFILE=$OPTARG
+      ;;
+    r )
+      REGIONS=$OPTARG
       ;;
     \? )
       echo "Usage: ./lw_aws_inventory.sh [-p profile]" 1>&2
@@ -112,7 +116,14 @@ function calculateInventory {
   accountLambdaFunctions=0
 
   printf "$profile, $accountid, "
-  for r in $(getRegions); do
+  local regionsToScan=$(echo $REGIONS | sed "s/,/ /g")
+  if [ -z "$regionsToScan" ]
+  then
+      # Regions to scan not set, get list from AWS
+      regionsToScan=$(getRegions)
+  fi
+
+  for r in $regionsToScan; do
     printf "$r "
 
     instances=$(getInstances $r $profile)
