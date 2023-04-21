@@ -2,11 +2,11 @@
 # Script to fetch AWS inventory for Lacework sizing.
 # Requirements: awscli, jq
 
-# You can specify a profile with the -p flag
 # Note:
-# 1. You can specify multiple accounts by passing a comma seperated list, e.g. "default,qa,test",
+# 1. You can specify multiple accounts by passing a comma seperated list using the -p flag, e.g. "-p default,qa,test",
 # there are no spaces between accounts in the list
-# 2. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
+# 2. You can specify what regions to cscan by passing the -r flag, e.g. "-r us-east-1,us-east-2"
+# 3. The script takes a while to run in large accounts with many resources, provides details per account and a final summary of all resources found.
 
 
 AWS_PROFILE=default
