@@ -46,16 +46,19 @@ variable "private_key_path" {
 variable "group_name" {
     type = string
     description = "group name"
+    default = "lacework_group_security_audit"
 }
 
 variable "user_name" {
-  type = string
+    type = string
     description = "user name"
+    default = "lacework_user_security_audit"
 }
 
 variable "policy_name" {
   type = string
   description = "policy name"
+  default = "lacework_policy_security_audit"
 }
 ##################################################
 # OCI SETUP
@@ -110,17 +113,17 @@ resource "oci_identity_policy" "lacework_policy_security_audit" {
   name        = var.policy_name
   description = "Policy that grants necessary permissions to perform the security audit."
   statements = [
-    "Allow group 'lacework_group_security_audit' to inspect compartments in tenancy",
-    "Allow group 'lacework_group_security_audit' to read audit-events in tenancy",
-    "Allow group 'lacework_group_security_audit' to read buckets in tenancy",
-    "Allow group 'lacework_group_security_audit' to read instance-family in tenancy",
-    "Allow group 'lacework_group_security_audit' to read volume-family in tenancy",
-    "Allow group 'lacework_group_security_audit' to read virtual-network-family in tenancy",
-    "Allow group 'lacework_group_security_audit' to read users in tenancy",
-    "Allow group 'lacework_group_security_audit' to read groups in tenancy",
-    "Allow group 'lacework_group_security_audit' to read policies in tenancy",
-    "Allow group 'lacework_group_security_audit' to read domains in tenancy",
-    "Allow group 'lacework_group_security_audit' to inspect tag-defaults in tenancy"
+    "Allow group '${var.group_name}' to inspect compartments in tenancy",
+    "Allow group '${var.group_name}' to read audit-events in tenancy",
+    "Allow group '${var.group_name}' to read buckets in tenancy",
+    "Allow group '${var.group_name}' to read instance-family in tenancy",
+    "Allow group '${var.group_name}' to read volume-family in tenancy",
+    "Allow group '${var.group_name}' to read virtual-network-family in tenancy",
+    "Allow group '${var.group_name}' to read users in tenancy",
+    "Allow group '${var.group_name}' to read groups in tenancy",
+    "Allow group '${var.group_name}' to read policies in tenancy",
+    "Allow group '${var.group_name}' to read domains in tenancy",
+    "Allow group '${var.group_name}' to inspect tag-defaults in tenancy"
   ]
 }
 
@@ -167,3 +170,4 @@ locals {
 output "nextstep" {
     value = local.nextstep
 }
+
