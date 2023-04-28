@@ -43,7 +43,20 @@ variable "private_key_path" {
     type = string
     description = "oci private key path"
 }
+variable "group_name" {
+    type = string
+    description = "group name"
+}
 
+variable "user_name" {
+  type = string
+    description = "user name"
+}
+
+variable "policy_name" {
+  type = string
+  description = "policy name"
+}
 ##################################################
 # OCI SETUP
 ##################################################
@@ -75,14 +88,14 @@ resource "local_file" "ssh-public-key" {
 }
 
 resource "oci_identity_user" "lacework_user_security_audit" {
-  name        = "lacework_user_security_audit"
+  name        = var.user_name
   description = "A read only Lacework user to access resource configs."
   compartment_id = data.oci_identity_tenancy.current.id
   email       = "oci-audit@lacework.net"
 }
 
 resource "oci_identity_group" "lacework_group_security_audit" {
-  name        = "lacework_group_security_audit"
+  name        = var.group_name
   description = "A lacework group needed to assign necessary read only permissions to lacework_user_security_audit."
   compartment_id = data.oci_identity_tenancy.current.id
 }
@@ -94,7 +107,7 @@ resource "oci_identity_user_group_membership" "lacework_user_group_membership" {
 
 resource "oci_identity_policy" "lacework_policy_security_audit" {
   compartment_id = data.oci_identity_tenancy.current.id
-  name        = "lacework_policy_security_audit"
+  name        = var.policy_name
   description = "Policy that grants necessary permissions to perform the security audit."
   statements = [
     "Allow group 'lacework_group_security_audit' to inspect compartments in tenancy",
@@ -154,4 +167,3 @@ locals {
 output "nextstep" {
     value = local.nextstep
 }
-
