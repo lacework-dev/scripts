@@ -7,4 +7,4 @@ To use the shell script ensure you have `jq`, `oci` and `lacework` CLI commands 
 ./lacework_oci_integration_setup.sh
 ```
 
-For Terraform refer to the [README.md](./terraform/README.md) in the Terraform directory.
+For Terraform refer to the [README.md](./tf/README.md) in the Terraform directory.
