@@ -114,15 +114,16 @@ resource "oci_identity_policy" "lacework_policy_security_audit" {
   description = "Policy that grants necessary permissions to perform the security audit."
   statements = [
     "Allow group '${var.group_name}' to inspect compartments in tenancy",
-    "Allow group '${var.group_name}' to read audit-events in tenancy",
     "Allow group '${var.group_name}' to read buckets in tenancy",
-    "Allow group '${var.group_name}' to read instance-family in tenancy",
-    "Allow group '${var.group_name}' to read volume-family in tenancy",
-    "Allow group '${var.group_name}' to read virtual-network-family in tenancy",
     "Allow group '${var.group_name}' to read users in tenancy",
-    "Allow group '${var.group_name}' to read groups in tenancy",
-    "Allow group '${var.group_name}' to read policies in tenancy",
-    "Allow group '${var.group_name}' to read domains in tenancy",
+    "Allow group '${var.group_name}' to inspect instances in tenancy",
+    "Allow group '${var.group_name}' to inspect volumes in tenancy",
+    "Allow group '${var.group_name}' to inspect subnets in tenancy",
+    "Allow group '${var.group_name}' to inspect security-lists in tenancy",
+    "Allow group '${var.group_name}' to inspect network-security-groups in tenancy",
+    "Allow group '${var.group_name}' to inspect groups in tenancy",
+    "Allow group '${var.group_name}' to inspect policies in tenancy",
+    "Allow group '${var.group_name}' to inspect domains in tenancy",
     "Allow group '${var.group_name}' to inspect tag-defaults in tenancy"
   ]
 }
@@ -170,4 +171,3 @@ locals {
 output "nextstep" {
     value = local.nextstep
 }
-
