@@ -90,15 +90,16 @@ oci iam policy create \
    --name $LACEWORK_OCI_POLICYNAME  \
    --description "Policy that grants necessary permissions to perform the security audit." \
    --statements "[\"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect compartments in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read audit-events in tenancy\", \
    \"Allow group '$LACEWORK_OIC_GROUPNAME' to read buckets in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read instance-family in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read volume-family in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read virtual-network-family in tenancy\", \
    \"Allow group '$LACEWORK_OIC_GROUPNAME' to read users in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read groups in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read policies in tenancy\", \
-   \"Allow group '$LACEWORK_OIC_GROUPNAME' to read domains in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect volumes in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect security-lists in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect subnets in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect network-security-groups in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect groups in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect instances in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect policies in tenancy\", \
+   \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect domains in tenancy\", \
    \"Allow group '$LACEWORK_OIC_GROUPNAME' to inspect tag-defaults in tenancy\" ]"
 
 LACEWORK_PRIVATE_KEY_PATH="$HOME/.oci/oci_api_key_lacework.pem"
