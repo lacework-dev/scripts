@@ -71,7 +71,7 @@ ORG_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ORG_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ORG_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 
-CSV_HEADER="\"Profile\", \"Account ID\", \"Regions\", \"EC2 Instances\", \"EC2 vCPUs\", \"ECS Fargate Clusters\", \"ECS Fargate Running Containers/Tasks\", \"ECS Fargate CPU Units\", \"ECS Fargate License vCPUs\", \"Lambda Functions\", \"MB Lambda Memory\", \"Lambda License vCPUs\", \"Total vCPUSs\""
+CSV_HEADER="\"Profile\", \"Account ID\", \"Regions\", \"EC2 Instances\", \"EC2 vCPUs\", \"ECS Fargate Clusters\", \"ECS Fargate Running Containers/Tasks\", \"ECS Fargate CPU Units\", \"ECS Fargate License vCPUs\", \"Lambda Functions (Not used for licensing)\", \"Total vCPUSs\""
 
 # Usage: ./lw_aws_inventory.sh
 while getopts ":p:o:r:a:-:g:" opt; do
@@ -162,7 +162,6 @@ ECS_FARGATE_CLUSTERS=0
 ECS_FARGATE_RUNNING_TASKS=0
 ECS_FARGATE_CPUS=0
 LAMBDA_FUNCTIONS=0
-LAMBDA_MEMORY_TOTAL=0
 
 function cleanup {
   # Revert to original AWS CLI configuration if script is stopped during execution
@@ -256,18 +255,6 @@ function getLambdaFunctions {
   aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions | length'
 }
 
-function getLambdaFunctionMemory {
-  local profile_string=$1
-  local r=$2
-  memoryForAllFunctions=$(aws $profile_string lambda list-functions --region $r --output json --no-cli-pager | jq '.Functions[].MemorySize')
-  TOTAL_LAMBDA_MEMORY=0
-  for memory in $memoryForAllFunctions; do
-    TOTAL_LAMBDA_MEMORY=$(($TOTAL_LAMBDA_MEMORY + $memory))
-  done
-  
-  echo "${TOTAL_LAMBDA_MEMORY}"
-}
-
 function calculateInventory {
   local account_name=$1
   local profile_string=$2
@@ -278,7 +265,6 @@ function calculateInventory {
   local accountECSFargateRunningTasks=0
   local accountECSFargateCPUs=0
   local accountLambdaFunctions=0
-  local accountLambdaMemory=0
   local accountTotalvCPUs=0
 
   if [[ $PRINT_CSV_DETAILS == "true" ]]
@@ -326,20 +312,15 @@ function calculateInventory {
       lambdafunctions=$(getLambdaFunctions "$profile_string" "$r")
       LAMBDA_FUNCTIONS=$(($LAMBDA_FUNCTIONS + $lambdafunctions))
       accountLambdaFunctions=$(($accountLambdaFunctions + $lambdafunctions))
-
-      lambdamemory=$(getLambdaFunctionMemory "$profile_string" "$r")
-      LAMBDA_MEMORY_TOTAL=$(($LAMBDA_MEMORY_TOTAL + $lambdamemory))
-      accountLambdaMemory=$(($accountLambdaMemory + $lambdamemory))
     fi
   done
 
   accountECSFargatevCPUs=$(($accountECSFargateCPUs / 1024))
-  accountLambdavCPUs=$(($accountLambdaMemory / 1024))
-  accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs + $accountLambdavCPUs))
+  accountTotalvCPUs=$(($accountEC2vCPUs + $accountECSFargatevCPUs))
 
     if [[ $PRINT_CSV_DETAILS == "true" ]]
     then
-      echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargateCPUs", "$accountECSFargatevCPUs", "$accountLambdaFunctions", "$accountLambdaMemory", "$accountLambdavCPUs", "$accountTotalvCPUs"
+      echo , "$accountEC2Instances", "$accountEC2vCPUs", "$accountECSFargateClusters", "$accountECSFargateRunningTasks", "$accountECSFargateCPUs", "$accountECSFargatevCPUs", "$accountLambdaFunctions", "$accountTotalvCPUs"
     fi
 }
 
@@ -362,17 +343,14 @@ function textoutput {
   echo "ECS Fargate Container CPU Units: $ECS_FARGATE_CPUS"
   echo "ECS Fargate vCPUs:               $ECS_FARGATE_VCPUS"
   echo ""
-  echo "Lambda Information"
-  echo "===================="
+  echo "Lambda Information (Not used for licensing)"
+  echo "============================================"
   echo "Lambda Functions:     $LAMBDA_FUNCTIONS"
-  echo "MB Lambda Memory:     $LAMBDA_MEMORY_TOTAL"
-  echo "Lambda License vCPUs: $LAMBDA_VCPUS"
   echo ""
   echo "License Summary"
   echo "===================="
   echo "  EC2 vCPUs:            $EC2_INSTANCE_VCPU"
   echo "+ ECS Fargate vCPUs:    $ECS_FARGATE_VCPUS"
-  echo "+ Lambda License vCPUs: $LAMBDA_VCPUS"
   echo "----------------------------"
   echo "= Total vCPUs:          $TOTAL_VCPUS"
 }
@@ -463,8 +441,7 @@ function runAnalysis {
   fi
 
   ECS_FARGATE_VCPUS=$(($ECS_FARGATE_CPUS / 1024))
-  LAMBDA_VCPUS=$(($LAMBDA_MEMORY_TOTAL / 1024))
-  TOTAL_VCPUS=$(($EC2_INSTANCE_VCPU + $ECS_FARGATE_VCPUS + $LAMBDA_VCPUS))
+  TOTAL_VCPUS=$(($EC2_INSTANCE_VCPU + $ECS_FARGATE_VCPUS))
 
   if [[ $PRINT_SUMMARY == "true" ]]
   then
