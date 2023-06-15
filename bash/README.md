@@ -13,10 +13,10 @@ Note the following about the script:
 The output from running the script can look as follows:
 ```
 ./lw_aws_inventory.sh -p admin-account -o -r us-east-1
-Profile, Account ID, Regions, EC2 Instances, EC2 vCPUs, ECS Fargate Clusters, ECS Fargate Running Containers/Tasks, ECS Fargate CPU Units, ECS Fargate License vCPUs, Lambda Functions, MB Lambda Memory, Lambda License vCPUs, Total vCPUSs
-sandbox-1, 123456789012, us-east-1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2
-sandbox-2, 234567890123, us-east-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-logging, 345678901234, us-east-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Profile, Account ID, Regions, EC2 Instances, EC2 vCPUs, ECS Fargate Clusters, ECS Fargate Running Containers/Tasks, ECS Fargate CPU Units, ECS Fargate License vCPUs, Lambda Functions (Not used for licensing), Total vCPUSs
+sandbox-1, 123456789012, us-east-1, 2, 2, 0, 0, 0, 0, 0, 2
+sandbox-2, 234567890123, us-east-1, 0, 0, 0, 0, 0, 0, 0, 0
+logging, 345678901234, us-east-1, 0, 0, 0, 0, 0, 0, 0, 0
 ######################################################################
 Lacework inventory collection complete.
 
@@ -38,14 +38,11 @@ ECS Fargate vCPUs:               0
 Lambda Information
 ====================
 Lambda Functions:     0
-MB Lambda Memory:     0
-Lambda License vCPUs: 0
 
 License Summary
 ====================
   EC2 vCPUs:            2
 + ECS Fargate vCPUs:    0
-+ Lambda License vCPUs: 0
 ----------------------------
 = Total vCPUs:          2
 ```
