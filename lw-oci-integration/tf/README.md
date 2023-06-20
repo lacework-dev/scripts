@@ -34,29 +34,16 @@ Before using the Terraform script, you must create the required environment vari
     ```
 3. Change directory to the `lw-oci-integration/tf` folder and copy `vars.tfvars.example` to `terraform.tfvars`.
 4. OCI auth is automatically handled by the cloud shell. To use this, we modify a couple of files:
-   * In `main.tf`, edit the provider section so that it looks like this (setting `tenancy_ocid` and `region` accordingly):
-     
-     ```
-     provider "oci" {
-       tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaatxph3zpu3jkem4cseejktwllb6dgsam7cx3jy63pazejzobvjqqq"
-       region = "us-sanjose-1"
-     } 
-     
-     ```
    * In `terraform.tfvars`, set the `region` and `tenancy_ocid` as appropriate. The `user_ocid`, `fingerprint` 
 and `private_key_path` fields are not applicable when using cloud shell. The `group_name`, `user_name` and `policy_name` will be
 created by the Terraform script for the Lacework OCI integration. They can be left as they are, or modified if required.
      
      ```
-     region="us-sanjose-1"
-     tenancy_ocid="ocid1.tenancy.oc1..aaaaaaaatxph3zpu3jkem4cseejktwllb6dgsam7cx3jy63pazejzobvjqia"
-     user_ocid="NotApplicable"
-     fingerprint="NotApplicable"
-     private_key_path="NotApplicable" 
-     
-     group_name="lacework_group_security_audit"
-     user_name="lacework_user_security_audit"
-     policy_name="lacework_policy_security_audit"
+     region="<YOUR HOME REGION  (e.g. us-ashburn-1)>"
+     tenancy_ocid="<YOUR OCI TEANCY OCID>"
+     user_ocid=null
+     fingerprint=null
+     private_key_path=null
      
      ```
 5. Install the Lacework CLI (if it is not already installed) and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
