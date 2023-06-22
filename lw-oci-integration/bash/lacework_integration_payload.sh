@@ -9,12 +9,12 @@ OUTPUT_FILE="lacework_payload.json"
 
 # Values of 6 variables below should be changed before running script:
 
-LACEWORK_OCI_USERNAME="ocid1.user.oc1..aaaaaaaaa3sq6j7icod2o6iky5smahcgt6xurxkuxzigyumpcg4rgyq5abcd"
-OCI_TENANCY_OCID="ocid1.tenancy.oc1..aaaaaaaatxph3zpu3jkem4cseejktwllb6dgsam7cx3jy63pazejzobvabcd"
-OCI_HOME_REGION="us-sanjose-1"
-OCI_TENANT_NAME="main tenant"
-LACEWORK_PRIVATE_KEY_PATH="/pathto/oci_api_key_lacework.pem"
-LACEWORK_PRIVATE_KEY_FINGERPRINT="1c:17:64:82:0d:86:c8:1d:8a:b6:d1:12:b7:a4:b2:cc"
+LACEWORK_OCI_USERNAME="<user_ocid>"
+OCI_TENANCY_OCID="<tenancy_ocid>"
+OCI_HOME_REGION="<home_region>"
+OCI_TENANT_NAME="<tenant_name>"
+LACEWORK_PRIVATE_KEY_PATH="<private_key_path>"
+LACEWORK_PRIVATE_KEY_FINGERPRINT="<fingerprint>"
 
 LACEWORK_INTEGRATION_NAME="oci-$OCI_TENANT_NAME"
 contents=$(cat $LACEWORK_PRIVATE_KEY_PATH)
