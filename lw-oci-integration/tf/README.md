@@ -75,7 +75,7 @@ Now, continue following instructions on [Lacework CLI Guide](https://docs.lacewo
    terraform init
    ```
 
-2. Now verify and plan the Terraform using this command:
+2. Now verify and generate a Terraform plan:
    ```
    terraform plan
    ```
