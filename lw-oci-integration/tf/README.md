@@ -1,7 +1,7 @@
 
 ## Lacework OCI Integration
 
-You can run the Terraform scripts locally or via an OCI cloud shell. We recommend using the OCI cloud shell, since it comes with Terraform pre-installed and provides for authentication.
+The OCI Terraform scripts can be run locally or through an OCI cloud shell. Using the OCI cloud shell is recommended, as it comes with Terraform pre-installed and helps with authentication.
 
 ## Prepare to run Terraform locally (Option 1)
 
