@@ -57,21 +57,21 @@ Before using the Terraform script, you must create the required environment vari
     cp vars.tfvars.example terraform.tfvars
     ```
 4. OCI auth is automatically handled by the cloud shell. To use this, modify `terraform.tfvars`:
-        ```
-        region="<YOUR HOME REGION  (e.g. us-ashburn-1)>"
-        tenancy_ocid="<YOUR OCI TEANCY OCID>"
-        user_ocid=null
-        fingerprint=null
-        private_key_path=null
+     ```
+     region="<YOUR HOME REGION  (e.g. us-ashburn-1)>"
+     tenancy_ocid="<YOUR OCI TEANCY OCID>"
+     user_ocid=null
+     fingerprint=null
+     private_key_path=null
 
-        group_name="lacework_group_security_audit"
-        user_name="lacework_user_security_audit"
-        policy_name="lacework_policy_security_audit"
-        ```
+     group_name="lacework_group_security_audit"
+     user_name="lacework_user_security_audit"
+     policy_name="lacework_policy_security_audit"
+     ```
    * `region` and `tenancy_ocid` should be set as appropriate.
    * `user_ocid`, `fingerprint` and `private_key_path` fields are not applicable when using cloud shell and should be set to null.
    * `group_name`, `user_name` and `policy_name` will be created by the Terraform script for the Lacework OCI integration. They can be left as they are, or modified if required. They should be unique.
-   * tenancy_ocid can be retrieved with this cli command:
+   * `tenancy_ocid` can be retrieved with this cli command:
        ```
        oci iam compartment list --raw-output --query "data[?contains(\"compartment-id\",'.tenancy.')].\"compartment-id\" | [0]"
        ```
@@ -79,7 +79,7 @@ Before using the Terraform script, you must create the required environment vari
    
 5. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
      
-   **Note:** The step to install the CLI may fail with permission denied on the OCI cloud shell. If this happens, install as follows:
+   **Note:** The install location in OCI cloud shell must be changed. Please install lacework CLI as follows:
       ```
       curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
       ```
