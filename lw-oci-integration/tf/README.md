@@ -84,7 +84,7 @@ Before using the Terraform script, you must create the required environment vari
       curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
       ```
  
-Now, continue following instructions to configure your API key.
+Now, continue to the Running Terraform section.
 
 # Running Terraform
 
