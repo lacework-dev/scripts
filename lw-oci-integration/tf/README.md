@@ -68,7 +68,7 @@ Before using the Terraform script, you must create the required environment vari
 
 Now, continue following instructions on [Lacework CLI Guide](https://docs.lacework.net/cli/) to configure your API key.
 
-# Running Terraform (common to options 1 and option 2)
+# Running Terraform
 
 1. Once the file is updated, run the following command to initialize Terraform:
    ```
