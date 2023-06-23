@@ -38,9 +38,9 @@ Before using the Terraform script, you must create the required environment vari
     cp vars.tfvars.example terraform.tfvars
     ```
 4. OCI auth is automatically handled by the cloud shell. To use this, modify the following files:
-   * In `terraform.tfvars`, set the `region` and `tenancy_ocid` as appropriate. The `user_ocid`, `fingerprint` 
-and `private_key_path` fields are not applicable when using cloud shell. The `group_name`, `user_name` and `policy_name` will be
-created by the Terraform script for the Lacework OCI integration. They can be left as they are, or modified if required.
+   * `region` and `tenancy_ocid` should be set as appropriate.
+   * `user_ocid`, `fingerprint` and `private_key_path` fields are not applicable when using cloud shell and should be set to null.
+   * `group_name`, `user_name` and `policy_name` will be created by the Terraform script for the Lacework OCI integration. They can be left as they are, or modified if required.
      
      ```
      region="<YOUR HOME REGION  (e.g. us-ashburn-1)>"
