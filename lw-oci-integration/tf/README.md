@@ -79,7 +79,7 @@ Now, continue following instructions on [Lacework CLI Guide](https://docs.lacewo
    ```
    terraform plan
    ```
-3. If everything looks good, apply the change using the following command:
+3. If `Terraform Plan` runs successfully with no errors, use the following command to create the required OCI resources:
    ```
    terraform apply -auto-approve
    ```
