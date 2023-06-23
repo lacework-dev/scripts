@@ -32,7 +32,11 @@ Before using the Terraform script, you must create the required environment vari
     ```
     git clone https://github.com/lacework-dev/scripts.git
     ```
-3. Change directory to the `lw-oci-integration/tf` folder and copy `vars.tfvars.example` to `terraform.tfvars`.
+3. Change directory to the `scripts/lw-oci-integration/tf` folder and copy `vars.tfvars.example` to `terraform.tfvars`.
+    ```
+    cd scripts/lw-oci-integration/tf
+    cp vars.tfvars.example terraform.tfvars
+    ```
 4. OCI auth is automatically handled by the cloud shell. To use this, we modify a couple of files:
    * In `terraform.tfvars`, set the `region` and `tenancy_ocid` as appropriate. The `user_ocid`, `fingerprint` 
 and `private_key_path` fields are not applicable when using cloud shell. The `group_name`, `user_name` and `policy_name` will be
