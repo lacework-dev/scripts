@@ -79,7 +79,7 @@ Before using the Terraform script, you must create the required environment vari
    
 5. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
      
-   **Note:** The step to install the CLI may fail with permission denied on the OCI cloud shell. If this happens, install as follows:
+   **Note:** The install location in OCI cloud shell must be changed. Please install lacework CLI as follows:
       ```
       curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
       ```
