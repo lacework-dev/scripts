@@ -3,6 +3,13 @@
 
 The OCI Terraform scripts can be run locally or through an OCI cloud shell. Using the OCI cloud shell is recommended, as it comes with Terraform pre-installed and helps with authentication.
 
+## Prerequisites
+
+1. terraform (recommend >=1.4.6: the version tested)
+2. git
+
+Both prerequisites are satisifed by OCI cloud shell.
+
 ## Prepare to run Terraform locally (Option 1)
 
 Before using the Terraform script, you must create the required environment variables to access your OCI tenant. The recommended way to do this is:
@@ -50,7 +57,7 @@ Before using the Terraform script, you must create the required environment vari
      private_key_path=null
      
      ```
-5. Install the Lacework CLI (if it is not already installed) and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
+5. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
      
    **Note:** The step to install the CLI may fail with permission denied on the OCI cloud shell. If this happens, follow these steps:
    1. Download the install script
@@ -66,11 +73,11 @@ Before using the Terraform script, you must create the required environment vari
       export PATH=$PATH:$PWD
       ```
 
-Now, continue following instructions on [Lacework CLI Guide](https://docs.lacework.net/cli/) to configure your API key.
+Now, continue following instructions to configure your API key.
 
 # Running Terraform
 
-1. Once the file is updated, run the following command to initialize Terraform:
+1. Run the following command to initialize Terraform:
    ```
    terraform init
    ```
