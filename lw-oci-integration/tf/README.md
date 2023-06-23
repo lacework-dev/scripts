@@ -83,7 +83,7 @@ Now, continue following instructions on [Lacework CLI Guide](https://docs.lacewo
    ```
    terraform apply -auto-approve
    ```
-4. After the plan is applied, a Lacework cloud account policy is created locally under ~/.oci/lacework_cloud_account.json. You can post this file to Lacework via the Lacework CLI to create your integration: 
+4. After the Terraform is applied, a Lacework cloud account payload is created locally under `~/.oci/lacework_cloud_account.json`. To create your OCI integration on the Lacework platform, run the following post:
    ```
    lacework api post /api/v2/CloudAccounts -d "$(cat ~/.oci/lacework_cloud_account.json)"
    ```
