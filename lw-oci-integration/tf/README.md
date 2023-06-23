@@ -20,7 +20,7 @@ Before using the Terraform script, you must create the required environment vari
     fingerprint="<YOUR KEY FINGER PRINT>"
     private_key_path="<YOUR KEY KEY PATH (e.g. ~/.oci/myocikey.pem)>"
     ```
-4. Install the Lacework CLI (if it is not already installed) and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
+4. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
 
 ## Prepare to run Terraform via OCI Cloud Shell (Option 2)
 
