@@ -35,6 +35,9 @@ sed -i.lw_tmp 's/import data.k8s/import data.lacework.iac.k8s/g' $1/*/*/policy.r
 sed -i.lw_tmp 's/lacework.allow/iac.allow/g' $1/*/*/policy.rego
 sed -i.lw_tmp 's/lacework.deny/iac.deny/g' $1/*/*/policy.rego
 sed -i.lw_tmp 's/lacework.resource/iac.resource/g' $1/*/*/policy.rego
+sed -i.lw_tmp 's/lacework.missing/iac.missing/g' $1/*/*/policy.rego
+sed -i.lw_tmp 's/lacework.input_type/iac.input_type/g' $1/*/*/policy.rego
+sed -i.lw_tmp 's/lacework.input_resource_types/iac.input_resource_types/g' $1/*/*/policy.rego
 
 # To support both GNU and BSD sed we needed to generate some swap files, delete these now.
 rm $1/*/*/*.lw_tmp
