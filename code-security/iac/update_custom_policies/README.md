@@ -28,7 +28,8 @@ e.g. `./update_policies_directory.sh policies/opal`
 * Run `./update_policies_directory.sh [policy_directory]`
 * Use `git diff` (or the diff function of your version control) to review the changes to your code.
   * Some simpler Opal policies will not reference the affected packages and will not receive any changes.
-* Ensure your Lacework CLI has the latest version of Opal by running `lacework iac download install --name lacework-opal-releases --reinstall`
+* Ensure your Lacework CLI has the latest version of Opal (at least v0.3.0) by running `lacework iac download install --name lacework-opal-releases --reinstall`
+  * You can confirm that Opal is at least v0.3.0 by running `lacework iac download list` - the `lacework-opal-releases` is the component to check.
 * Run `lacework iac policy test -d [policy_directory]` to test the changes to your policy code.
 * If you are happy with the code changes and the policy tests; commit the changes to version control.
 * If you manually upload your custom policies, run `lacework iac policy upload [policy_directory]` to upload your new code.
