@@ -41,12 +41,14 @@ Before using the Terraform script, you must create the required environment vari
 
 4. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
 
+Next, run Terraform and create the Lacework integration, as described in the "Running Terraform" section below.
+
 ## Prepare to run Terraform via OCI Cloud Shell (Option 2)
 
 1. Open the OCI cloud shell. For example:
-   1. Log in to the OCI console.
-   2. Click on the '<>' icon (developer tools), located on the top right of the OCI web console.
-   3. Select Cloud Shell.
+   1. Log in to the OCI web console.
+   2. Ensure that your home region is selected in the [**Regions**](https://docs.oracle.com/en-us/iaas/Content/GSG/Concepts/working-with-regions.htm) menu at the top right of the OCI console. 
+   3. Click the Developer Tools icon next to the **Regions** menu and then [**Cloud Shell**](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cloudshellgettingstarted.htm). The cloud shell should appear with your current region indicated in the prompt at the bottom of the console. 
 2. Clone this github repo. For example:
     ```
     git clone https://github.com/lacework-dev/scripts.git
@@ -77,16 +79,15 @@ Before using the Terraform script, you must create the required environment vari
        ```
    * `region` should be in '[region identifier](https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm)' format, e.g. us-sanjose-1.
    
-5. Install the Lacework CLI and configure with your API key. For more information, see the [Lacework CLI Guide](https://docs.lacework.net/cli/).
-     
-   **Note:** The install location in OCI cloud shell must be changed. Please install lacework CLI as follows:
-      ```
-      curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
-      ```
- 
-Now, continue to the Running Terraform section.
+5. Install the Lacework CLI using the following command. Note that, in the OCI cloud shell, you must specify the install location explicitly, as follows: 
+   ```
+   curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
+   ```
+6. Configure the Lacework CLI with your API key. For details, see the [Create API Key](https://docs.lacework.net/cli/#create-api-key) and [Configure the CLI](https://docs.lacework.net/cli/#configure-the-cli) in the Lacework CLI documentation. 
 
-# Running Terraform
+Next, run Terraform and create the Lacework integration, as described in the next section.
+
+## Running Terraform
 
 1. Run the following command to initialize Terraform:
    ```
@@ -106,7 +107,6 @@ Now, continue to the Running Terraform section.
    lacework api post /api/v2/CloudAccounts -d "$(cat ~/.oci/lacework_cloud_account.json)"
    ```
 
+**Note:** You may need to use the `--profile` option for the preceding Lacework CLI command, depending on your configuration. The default profile is used if you do not specify one. See [information on managing profiles](https://docs.lacework.net/cli#multiple-profiles) in the Lacework CLI documentation for more information.
 
-| **Note:**          |
-|:---------------------------|
-| You may need to use the `--profile` option for the lacework-cli depending on your configuration. The default profile will be used if one is not specified.     |
+
