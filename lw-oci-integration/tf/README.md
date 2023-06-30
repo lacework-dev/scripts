@@ -47,7 +47,7 @@ Next, run Terraform and create the Lacework integration, as described in the "Ru
 
 1. Open the OCI cloud shell. For example:
    1. Log in to the OCI web console.
-   2. Ensure that your home region is selected in the [**Regions**](https://docs.oracle.com/en-us/iaas/Content/GSG/Concepts/working-with-regions.htm) menu at the top right of the OCI console. 
+   2. Ensure that your home region is selected in the [**Regions**](https://docs.oracle.com/en-us/iaas/Content/GSG/Concepts/working-with-regions.htm) menu at the top right of the OCI web console. 
    3. Click the Developer Tools icon next to the **Regions** menu and then [**Cloud Shell**](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cloudshellgettingstarted.htm). The cloud shell should appear with your current region indicated in the prompt at the bottom of the console. 
 2. Clone this github repo. For example:
     ```
