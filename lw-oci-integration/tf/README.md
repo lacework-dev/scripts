@@ -107,6 +107,8 @@ Next, run Terraform and create the Lacework integration, as described in the nex
    lacework api post /api/v2/CloudAccounts -d "$(cat ~/.oci/lacework_cloud_account.json)"
    ```
 
-**Note:** You may need to use the `--profile` option for the preceding Lacework CLI command, depending on your configuration. The default profile is used if you do not specify one. See [information on managing profiles](https://docs.lacework.net/cli#multiple-profiles) in the Lacework CLI documentation for more information.
+:::note
+You may need to use the `--profile` option for the preceding Lacework CLI command, depending on your configuration. The default profile is used if you do not specify one. See [information on managing profiles](https://docs.lacework.net/cli#multiple-profiles) in the Lacework CLI documentation for more information.
+:::
 
 
