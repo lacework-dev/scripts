@@ -92,11 +92,12 @@ function analyzeProject {
       local machineType=$(echo $machineTypeUrl | cut -d "/" -f11) # extract machine type from url
       local typeVCPUValue=$(gcloud compute machine-types describe $machineType --zone=$location --project=$project --format=json | jq -r '.guestCpus') # get vCPU for machine type
 
-      TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
-      TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $count)) # increment total count, including Standard GKE
-      projectVCPUs=$(($scopeVCPUs + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
-      projectVmCount=$(($scopeVmCount + $count)) # increment total count, including Standard GKE
+      projectVCPUs=$(($projectVCPUs + (($count * $typeVCPUValue)))) # increment total count, including Standard GKE
+      projectVmCount=$(($projectVmCount + $count)) # increment total count, including Standard GKE
     done
+
+    TOTAL_GCE_VCPU=$(($TOTAL_GCE_VCPU + $projectVCPUs)) # increment total count, including Standard GKE
+    TOTAL_GCE_VM_COUNT=$(($TOTAL_GCE_VM_COUNT + $projectVmCount)) # increment total count, including Standard GKE
   elif [[ $instanceList == *"SERVICE_DISABLED"* ]]
   then
     projectVmCount="\"INFO: Compute instance API disabled\""
