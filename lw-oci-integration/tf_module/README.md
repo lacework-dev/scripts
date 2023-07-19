@@ -50,7 +50,7 @@ Next, run Terraform and create the Lacework integration, as described in the nex
    ```
 4. List integrations to verify:
    ```
-   lacework cloud-account list | grep -i oci
+   lacework cloud-accounts list -t OciCfg
    ```
 
 :::note
