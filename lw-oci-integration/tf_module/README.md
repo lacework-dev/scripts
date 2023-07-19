@@ -15,34 +15,21 @@ prerequisites are satisifed by OCI cloud shell.
    1. Log in to the OCI web console.
    2. Ensure that your home region is selected in the [**Regions**](https://docs.oracle.com/en-us/iaas/Content/GSG/Concepts/working-with-regions.htm) menu at the top right of the OCI web console. 
    3. Click the Developer Tools icon next to the **Regions** menu and then [**Cloud Shell**](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cloudshellgettingstarted.htm). The cloud shell should appear with your current region indicated in the prompt at the bottom of the console. 
-2. Create a file main.tf containing:
+2. Create a file main.tf containing (filling in values for tenancy_id and user_email):
     ```
    module "lacework_oci_cfg_integration" {
    source = "lacework/config/oci"
    create = true
-   tenancy_id = var.tenancy_ocid
-   user_email = var.user_email
-   }
-
-   variable "tenancy_ocid" {
-   type = string
-   }
-
-   variable "user_email" {
-   type = string
+   tenancy_id = "<tenancy_ocid>"
+   user_email = "<user_email>"
    }
    ```
-3. Create a file terraform.tfvars containing the following, inserting values for tenancy and email:
-    ```
-   tenancy_ocid = ""
-   user_email = ""
-   ```
 
-4. Install the Lacework CLI using the following command. Note that, in the OCI cloud shell, you must specify the install location explicitly, as follows: 
+3. Install the Lacework CLI using the following command. Note that, in the OCI cloud shell, you must specify the install location explicitly, as follows: 
    ```
    curl https://raw.githubusercontent.com/lacework/go-sdk/main/cli/install.sh | bash -s -- -d /home/oci/bin
    ```
-5. Configure the Lacework CLI with your API key. For details, see the [Create API Key](https://docs.lacework.net/cli/#create-api-key) and [Configure the CLI](https://docs.lacework.net/cli/#configure-the-cli) in the Lacework CLI documentation. 
+4. Configure the Lacework CLI with your API key. For details, see the [Create API Key](https://docs.lacework.net/cli/#create-api-key) and [Configure the CLI](https://docs.lacework.net/cli/#configure-the-cli) in the Lacework CLI documentation. 
 
 Next, run Terraform and create the Lacework integration, as described in the next section.
 
