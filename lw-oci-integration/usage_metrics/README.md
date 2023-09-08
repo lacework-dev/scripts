@@ -20,7 +20,7 @@ same, or weaker than those needed to *collect* the resource information in a Lac
 ### Generate CSV with data count information
 To run the code, you can either
 1. Copy the contents of `oci_usage_metrics.py` in the console (or) 
-2. Use the upload the `oci_usage_metrics.py` file feature described [here](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/devcloudshellgettingstarted.htm#ariaid-title3) and run `python oci_usage_metrics.py`
+2. Use the upload file feature described [here](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/devcloudshellgettingstarted.htm#ariaid-title3) to upload the `oci_usage_metrics.py` file and run `python oci_usage_metrics.py`
 
 ## Downloading the File
 To download a file from Cloud Shell:
