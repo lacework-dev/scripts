@@ -25,6 +25,10 @@ same, or weaker than those needed to *collect* the resource information in a Lac
    ```
    ls -l OCIUsageMetrics.csv 
    ```
+7. Move the csv to the home directory
+   ```
+   cp OCIUsageMetrics.csv ../../../OCIUsageMetrics.csv
+   ```
 
 ## Downloading the csv File
 
