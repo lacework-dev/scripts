@@ -9,7 +9,7 @@ same, or weaker than those needed to *collect* the resource information in a Lac
 
 1. Login to the Console in the tenancy and region with most data volume.
 2. Click the Cloud Shell icon in the Console header. Note that Cloud Shell will execute commands against the region selected in the Console's Region selection menu when Cloud Shell was started.
-3. Clone this repoisitory
+3. Clone this repository
     ```
     git clone https://github.com/lacework-dev/scripts.git
     ```
