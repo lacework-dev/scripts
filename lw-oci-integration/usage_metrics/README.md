@@ -5,24 +5,29 @@ This directory contains a simple python script that can be executed in the OCI C
 The script uses the search API to query resources in a tenancy. The user profile (`DEFAULT` profile in oci config) that runs the script needs the correct set of policies to run it successfully. These policies are the
 same, or weaker than those needed to *collect* the resource information in a Lacework integration, which is presented in [the terraform script](https://github.com/lacework/terraform-oci-config/blob/main/main.tf).
 
-## Running the script
+## Run the script
 
 1. Login to the Console in the tenancy and region with most data volume.
 2. Click the Cloud Shell icon in the Console header. Note that Cloud Shell will execute commands against the region selected in the Console's Region selection menu when Cloud Shell was started.
-3. Run Python:
+3. Clone this repository
     ```
-    user@cloudshell:oci (us-phoenix-1)$ python3
-    Python 3.6.8 (default, Oct  1 2020, 20:32:44) 
-    [GCC 4.8.5 20150623 (Red Hat 4.8.5-44.0.3)] on linux
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> 
+    git clone https://github.com/lacework-dev/scripts.git
     ```
-### Generate CSV with data count information
-To run the code, you can either
-1. Copy the contents of `oci_usage_metrics.py` in the console (or) 
-2. Use the upload file feature described [here](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/devcloudshellgettingstarted.htm#ariaid-title3) to upload the `oci_usage_metrics.py` file and run `python oci_usage_metrics.py`
+4. Change to the directory containing the python script
+    ```
+    cd scripts/lw-oci-integration/usage_metrics/
+    ```
+5. Run the script
+   ```
+   python oci_usage_metrics.py
+   ```
+6. Verify csv file exists
+   ```
+   ls -l OCIUsageMetrics.csv 
+   ```
 
-## Downloading the File
+## Downloading the csv File
+
 To download a file from Cloud Shell:
 
 1. Click the Cloud Shell menu at the top left of the Cloud Shell window and select Download. The File Download dialog appears:
