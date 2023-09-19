@@ -1,9 +1,0 @@
-region="<YOUR HOME REGION  (e.g. us-ashburn-1)>"
-tenancy_ocid="<YOUR OCI TEANCY OCID>"
-user_ocid="<YOUR OCI USER OCID>"
-fingerprint="<YOUR KEY FINGER PRINT>"
-private_key_path="<YOUR KEY KEY PATH (e.g. ~/.oci/myocikey.pem)>"
-
-group_name="lacework_group_security_audit"
-user_name="lacework_user_security_audit"
-policy_name="lacework_policy_security_audit"
