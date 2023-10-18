@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 )
-gi status
+
 var defaultIncludedLocations = []string{
 	"eastus",
 	"eastus2",
