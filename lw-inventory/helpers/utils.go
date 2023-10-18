@@ -27,6 +27,10 @@ func ParseDebug(cmd *cobra.Command) bool {
 	return GetFlagEnvironmentBool(cmd, "debug", "debug", false)
 }
 
+func ParseUseQuotas(cmd *cobra.Command) bool {
+	return GetFlagEnvironmentBool(cmd, "useQuotas", "useQuotas", false)
+}
+
 func GetFlagEnvironmentBool(cmd *cobra.Command, flag string, env string, required bool) bool {
 	value, _ := cmd.Flags().GetBool(flag)
 	return value

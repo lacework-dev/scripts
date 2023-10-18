@@ -9,10 +9,54 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
+gi status
+var defaultIncludedLocations = []string{
+	"eastus",
+	"eastus2",
+	"westus",
+	"centralus",
+	"northcentralus",
+	"southcentralus",
+	"northeurope",
+	"westeurope",
+	"eastasia",
+	"southeastasia",
+	"japaneast",
+	"japanwest",
+	"australiaeast",
+	"australiasoutheast",
+	"australiacentral",
+	"brazilsouth",
+	"southindia",
+	"centralindia",
+	"westindia",
+	"canadacentral",
+	"canadaeast",
+	"westus2",
+	"westcentralus",
+	"uksouth",
+	"ukwest",
+	"koreacentral",
+	"koreasouth",
+	"francecentral",
+	"southafricanorth",
+	"uaenorth",
+	"switzerlandnorth",
+	"germanywestcentral",
+	"norwayeast",
+	"jioindiawest",
+	"westus3",
+	"swedencentral",
+	"qatarcentral",
+	"polandcentral",
+	"italynorth",
+	"israelcentral",
+}
 
-func Run(subscriptionsToIgnore []string, debug bool) {
+func Run(subscriptionsToIgnore []string, debug bool, useQuotas bool, includeLocations []string, excludeLocations []string) {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -22,130 +66,155 @@ func Run(subscriptionsToIgnore []string, debug bool) {
 	var vmOSCounts OSCounts
 	var totalVCPUs int32
 	subscriptionsInventoried := 0
+
 	for _, subscription := range subscriptions {
 		if !helpers.Contains(subscriptionsToIgnore, subscription) {
 			var subscriptionVMOSCounts OSCounts
 			subscriptionsInventoried++
 			fmt.Println("Scanning Subscription", subscription)
-			setSubscription(subscription)
-			standardAgents := getStandardAgents()
-			enterpriseAgents := getEntepriseAgents()
-			scaleSets := getVMScaleSet()
-			rgs := getResourceGroups()
-			for _, group := range rgs {
-				getContainers(group)
+
+			valid := setSubscription(subscription)
+			if !valid {
+				continue
 			}
 
-			var locations []string
-			for _, vm := range standardAgents {
-				if !helpers.Contains(locations, vm.Location) {
-					locations = append(locations, vm.Location)
+			if useQuotas {
+				//locations := getLocations()
+				locations := defaultIncludedLocations
+
+				if includeLocations != nil {
+					locations = includeLocations
 				}
-			}
 
-			for _, vm := range scaleSets {
-				if !helpers.Contains(locations, vm.Location) {
-					locations = append(locations, vm.Location)
+				for _, l := range locations {
+					if helpers.Contains(excludeLocations, l) {
+						continue
+					}
+
+					totalVCPUs += getUsage(l)
 				}
-			}
-
-			for _, vm := range enterpriseAgents {
-				if !helpers.Contains(locations, vm.Location) {
-					locations = append(locations, vm.Location)
+			} else {
+				standardAgents := getStandardAgents()
+				enterpriseAgents := getEntepriseAgents()
+				scaleSets := getVMScaleSet()
+				rgs := getResourceGroups()
+				for _, group := range rgs {
+					getContainers(group)
 				}
-			}
 
-			var vmSizes []MachineType
-			for _, location := range locations {
-				vmSizes = getVMSizesByLocation(location)
-			}
-
-			var standardAgentsWithvCPU []VMInfo
-			var vmvCPU int32
-			for _, vm := range standardAgents {
-				for _, size := range vmSizes {
-					if vm.Location == size.Location && vm.VMSize == size.Name {
-						vm.vCPUs = size.vCPUs
-						vmvCPU += vm.vCPUs
-						totalVCPUs += size.vCPUs
-						standardAgentsWithvCPU = append(standardAgentsWithvCPU, vm)
+				var locations []string
+				for _, vm := range standardAgents {
+					if !helpers.Contains(locations, vm.Location) {
+						locations = append(locations, vm.Location)
 					}
 				}
-			}
 
-			var scaleSetsWithvCPU []VMInfo
-			var scalesetvCPU int32
-			for _, vm := range scaleSets {
-				for _, size := range vmSizes {
-					if vm.Location == size.Location && vm.VMSize == size.Name {
-						vm.vCPUs = size.vCPUs * vm.Quantity
-						scalesetvCPU += vm.vCPUs
-						totalVCPUs += vm.vCPUs
-						scaleSetsWithvCPU = append(scaleSetsWithvCPU, vm)
+				for _, vm := range scaleSets {
+					if !helpers.Contains(locations, vm.Location) {
+						locations = append(locations, vm.Location)
 					}
 				}
-			}
 
-			var enterpriseAgentsWithvCPU []VMInfo
-			var k8svCPU int32
-			for _, vm := range enterpriseAgents {
-				for _, size := range vmSizes {
-					if vm.Location == size.Location && vm.VMSize == size.Name {
-						vm.vCPUs = size.vCPUs
-						k8svCPU += vm.vCPUs
-						totalVCPUs += size.vCPUs
-						enterpriseAgentsWithvCPU = append(enterpriseAgentsWithvCPU, vm)
+				for _, vm := range enterpriseAgents {
+					if !helpers.Contains(locations, vm.Location) {
+						locations = append(locations, vm.Location)
 					}
 				}
-			}
 
-			fmt.Println("VM Counts", len(standardAgentsWithvCPU))
-			fmt.Println("VM Scale Set Counts", len(scaleSetsWithvCPU))
-			fmt.Println("AKS Counts", len(enterpriseAgentsWithvCPU))
-
-			fmt.Println("\nVM vCPU Counts", vmvCPU)
-			fmt.Println("VM Scale Set vCPU Counts", scalesetvCPU)
-			fmt.Println("AKS vCPU Counts", k8svCPU)
-
-			for _, vm := range standardAgentsWithvCPU {
-				if vm.OS == "Linux" {
-					subscriptionVMOSCounts.Linux++
-				} else {
-					subscriptionVMOSCounts.Windows++
+				var vmSizes []MachineType
+				for _, location := range locations {
+					vmSizes = getVMSizesByLocation(location)
 				}
-			}
 
-			for _, vm := range scaleSetsWithvCPU {
-				if vm.OS == "Linux" {
-					subscriptionVMOSCounts.Linux += vm.Quantity
-				} else {
-					subscriptionVMOSCounts.Windows += vm.Quantity
+				var standardAgentsWithvCPU []VMInfo
+				var vmvCPU int32
+				for _, vm := range standardAgents {
+					for _, size := range vmSizes {
+						if vm.Location == size.Location && vm.VMSize == size.Name {
+							vm.vCPUs = size.vCPUs
+							vmvCPU += vm.vCPUs
+							totalVCPUs += size.vCPUs
+							standardAgentsWithvCPU = append(standardAgentsWithvCPU, vm)
+						}
+					}
 				}
-			}
 
-			for _, vm := range enterpriseAgentsWithvCPU {
-				if vm.OS == "Linux" {
-					subscriptionVMOSCounts.Linux++
-				} else {
-					subscriptionVMOSCounts.Windows++
+				var scaleSetsWithvCPU []VMInfo
+				var scalesetvCPU int32
+				for _, vm := range scaleSets {
+					for _, size := range vmSizes {
+						if vm.Location == size.Location && vm.VMSize == size.Name {
+							vm.vCPUs = size.vCPUs * vm.Quantity
+							scalesetvCPU += vm.vCPUs
+							totalVCPUs += vm.vCPUs
+							scaleSetsWithvCPU = append(scaleSetsWithvCPU, vm)
+						}
+					}
 				}
+
+				var enterpriseAgentsWithvCPU []VMInfo
+				var k8svCPU int32
+				for _, vm := range enterpriseAgents {
+					for _, size := range vmSizes {
+						if vm.Location == size.Location && vm.VMSize == size.Name {
+							vm.vCPUs = size.vCPUs
+							k8svCPU += vm.vCPUs
+							totalVCPUs += size.vCPUs
+							enterpriseAgentsWithvCPU = append(enterpriseAgentsWithvCPU, vm)
+						}
+					}
+				}
+
+				fmt.Println("VM Counts", len(standardAgentsWithvCPU))
+				fmt.Println("VM Scale Set Counts", len(scaleSetsWithvCPU))
+				fmt.Println("AKS Counts", len(enterpriseAgentsWithvCPU))
+
+				fmt.Println("\nVM vCPU Counts", vmvCPU)
+				fmt.Println("VM Scale Set vCPU Counts", scalesetvCPU)
+				fmt.Println("AKS vCPU Counts", k8svCPU)
+
+				for _, vm := range standardAgentsWithvCPU {
+					if vm.OS == "Linux" {
+						subscriptionVMOSCounts.Linux++
+					} else {
+						subscriptionVMOSCounts.Windows++
+					}
+				}
+
+				for _, vm := range scaleSetsWithvCPU {
+					if vm.OS == "Linux" {
+						subscriptionVMOSCounts.Linux += vm.Quantity
+					} else {
+						subscriptionVMOSCounts.Windows += vm.Quantity
+					}
+				}
+
+				for _, vm := range enterpriseAgentsWithvCPU {
+					if vm.OS == "Linux" {
+						subscriptionVMOSCounts.Linux++
+					} else {
+						subscriptionVMOSCounts.Windows++
+					}
+				}
+
+				fmt.Println("\nVM OS Counts")
+				fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
+				fmt.Printf("Windows VMs %d\n", vmOSCounts.Windows)
+
+				vmOSCounts.Linux += subscriptionVMOSCounts.Linux
+				vmOSCounts.Windows += subscriptionVMOSCounts.Windows
 			}
-
-			fmt.Println("\nVM OS Counts")
-			fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
-			fmt.Printf("Windows VMs %d\n", vmOSCounts.Windows)
-
-			vmOSCounts.Linux += subscriptionVMOSCounts.Linux
-			vmOSCounts.Windows += subscriptionVMOSCounts.Windows
-
 		}
 	}
 
 	fmt.Println("----------------------------------------------")
 	fmt.Println("Total vCPUs", totalVCPUs)
-	fmt.Println("\nTotal VM OS Counts")
-	fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
-	fmt.Printf("Windows VMs %d\n", vmOSCounts.Windows)
+
+	if !useQuotas {
+		fmt.Println("\nTotal VM OS Counts")
+		fmt.Printf("Linux VMs %d\n", vmOSCounts.Linux)
+		fmt.Printf("Windows VMs %d\n", vmOSCounts.Windows)
+	}
 
 	fmt.Println("\nNumber of Azure subscriptions Inventoried", subscriptionsInventoried)
 	fmt.Println("----------------------------------------------")
@@ -228,6 +297,32 @@ func ParseIgnoreSubscriptions(cmd *cobra.Command) []string {
 	return subscriptions
 }
 
+func ParseIncludeLocations(cmd *cobra.Command) []string {
+	includeFlag := helpers.GetFlagEnvironmentString(cmd, "include-locations", "include-locations", "", false)
+	var locations []string
+	if includeFlag != "" {
+		locTemp := strings.Split(includeFlag, ",")
+		for _, p := range locTemp {
+			trimmed := strings.TrimSpace(p)
+			locations = append(locations, trimmed)
+		}
+	}
+	return locations
+}
+
+func ParseExcludeLocations(cmd *cobra.Command) []string {
+	excludeFlag := helpers.GetFlagEnvironmentString(cmd, "exclude-locations", "exclude-locations", "", false)
+	var locations []string
+	if excludeFlag != "" {
+		locTemp := strings.Split(excludeFlag, ",")
+		for _, p := range locTemp {
+			trimmed := strings.TrimSpace(p)
+			locations = append(locations, trimmed)
+		}
+	}
+	return locations
+}
+
 type getAKSNodesResponse struct {
 	AgentPoolProfiles []struct {
 		PowerState struct {
@@ -279,7 +374,8 @@ func setSubscription(subscription string) bool {
 	cmd.Stdout = buf
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		helpers.Bail("error running az set subscription", err)
+		log.Errorln("error running az set subscription", err)
+		return false
 	}
 
 	return true
@@ -452,4 +548,67 @@ func getSubscriptions() []string {
 	}
 
 	return subscriptions
+}
+
+type getListLocationsResponse struct {
+	DisplayName string `json:"displayName"`
+	Name        string `json:"name"`
+}
+
+func getLocations() []string {
+	buf := bytes.NewBuffer([]byte{})
+
+	cmd := exec.Command("az", "account", "list-locations")
+	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		helpers.Bail("error running az account list-locations", err)
+	}
+
+	response := []getListLocationsResponse{}
+	if err := json.NewDecoder(buf).Decode(&response); err != nil {
+		helpers.Bail("Error decoding list locations json", err)
+	}
+
+	var locations []string
+	for _, location := range response {
+		locations = append(locations, location.Name)
+	}
+
+	return locations
+}
+
+type getListUsageResponse struct {
+	Value string `json:"currentValue"`
+	Name  string `json:"localName"`
+}
+
+func getUsage(location string) int32 {
+	buf := bytes.NewBuffer([]byte{})
+
+	cmd := exec.Command("az", "vm", "list-usage", "--location", location)
+	cmd.Stdout = buf
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Errorf("error running az vm list-usage", err)
+		return 0
+	}
+
+	response := []getListUsageResponse{}
+	if err := json.NewDecoder(buf).Decode(&response); err != nil {
+		helpers.Bail("Error decoding list usage json", err)
+	}
+
+	var vcpus int32
+	for _, q := range response {
+		if q.Name == "Total Regional vCPUs" {
+			vcpu, err := strconv.ParseInt(q.Value, 10, 32)
+			if err != nil {
+				println(err)
+			}
+			vcpus = int32(vcpu)
+		}
+	}
+	fmt.Printf("%s: %d vCPUS\n", location, vcpus)
+	return vcpus
 }
