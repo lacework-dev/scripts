@@ -153,6 +153,15 @@ then
   exit
 fi
 
+#Ensure jq is installed
+
+if ! command -v jq &> /dev/null
+then
+    echo "The script requires jq to run."
+    echo "See https://jqlang.github.io/jq/download/ for installation options."
+    exit 1
+fi
+
 # Set the initial counts to zero.
 ACCOUNTS=0
 ORGANIZATIONS=0
