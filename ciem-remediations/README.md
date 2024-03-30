@@ -15,7 +15,7 @@ Supports CSV(s) downloaded from Lacework console, or provide arn(s) to pull dire
 ## Usage
 
 ```
-usage: generate-policy.py [-h] [--split {fewest-policies,by-service,none}] sources [sources ...]
+usage: generate-policy.py [-h] [--maxchars MAXCHARS] [--split {fewest-policies,by-service,none}] sources [sources ...]
 
 Generate an IAM policy document containing observed IAM actions for a given IAM Role.
 
