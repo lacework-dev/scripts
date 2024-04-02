@@ -45,7 +45,10 @@ def recursive_sort(data):
             sorted_dict[key] = recursive_sort(value)
         return sorted_dict
     elif isinstance(data, list):
-        return sorted(data)
+        if len(data) > 0 and isinstance(data[0], dict):
+            return sorted([recursive_sort(item) for item in data])
+        else:
+            return sorted(data)
     else:
         return data
 
@@ -84,6 +87,7 @@ def parse_csv(filename):
     if not os.path.exists(filename):
         logger.error(f"The file '{filename}' does not exist.")
         exit(1)
+    csv_data = []
     with open(filename, 'r') as file:
         reader = csv.DictReader(file)
         for row in reader:
@@ -96,8 +100,8 @@ def parse_csv(filename):
                     'RESOURCE_ID': row['Resource'],
                     'ACTION': action,
                 }
-                data.append(entry)
-    return data
+                csv_data.append(entry)
+    return csv_data
 
 def generate_policies(data, max_chars, by_service=False):
     policies = []
