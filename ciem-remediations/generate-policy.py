@@ -45,7 +45,10 @@ def recursive_sort(data):
             sorted_dict[key] = recursive_sort(value)
         return sorted_dict
     elif isinstance(data, list):
-        return sorted(data)
+        if len(data) > 0 and isinstance(data[0], dict):
+            return sorted([recursive_sort(item) for item in data])
+        else:
+            return sorted(data)
     else:
         return data
 
