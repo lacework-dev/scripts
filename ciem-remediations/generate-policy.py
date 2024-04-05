@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 # -*- coding: utf-8 -*-
 """
-Example script to generate an IAM policy document containing observed IAM actions for a given IAM Role.
+Script to generate an IAM policy document containing observed IAM actions for a given IAM Role.
 """
 
 import sys, os
