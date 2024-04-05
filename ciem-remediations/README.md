@@ -85,9 +85,7 @@ You may control the behavior for policy splitting using the `--split` argument:
 
 | Option | Description |
 |---|---|
-| `fewest-policies` (default) | Tries to generate similarly sized policies by separating into groups of services. In some scenarios a policy may contain actions from multiple services, but these will be grouped together.
-
-Actions from a single service will never span multiple policies, unless it is too big as a standalone policy, in which case it will be separated into multiple standalone polices for that service alone. In other words, you will not see actions from multiple services spread across multiple policies containing other actions from other services. |
+| `fewest-policies` (default) | Tries to generate similarly sized policies by separating into groups of services. In some scenarios a policy may contain actions from multiple services, but these will be grouped together. <br><br>Actions from a single service will never span multiple policies, unless it is too big as a standalone policy, in which case it will be separated into multiple standalone polices for that service alone. In other words, you will not see actions from multiple services spread across multiple policies containing other actions from other services. |
 | `by-service` | Will create separate policies for each service. If a given service has too many actions for a single policy (defined by `maxchars`) then it will be separated into multiple policies |
 | `none` | Do not split the output at all, will return a single policy regardless of `maxchars` |
 
