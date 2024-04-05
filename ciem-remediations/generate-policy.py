@@ -188,7 +188,7 @@ generate-policy.py arn:aws:iam:123456::role/some-role --split=by-service
         """)
     parser.add_argument("--maxchars", type=int, help="Maximum size of a policy (does not count whitespace). Default is 6,000", default=6000)
     parser.add_argument("--split", type=str, help="How to handle splitting large datasets. Default is 'fewest-policies'", default='fewest-policies', choices=['fewest-policies', 'by-service', 'none'])
-    parser.add_argument('sources', type=str, help="Specify sources. Can be local CSV files exported from Lacework, or a list of ARNs to fetch from the Lacework API", action='store', nargs='+')
+    parser.add_argument('sources', type=str, metavar='source', help="Specify source(s). Can be local CSV files exported from Lacework, or a list of ARNs to fetch from the Lacework API", action='store', nargs='+')
     args = parser.parse_args()
 
     # Build start/end times
