@@ -21,6 +21,13 @@ Lacework entitlement data for AWS is comprised of a list of identities, their gr
 
 To create a custom policy for a given identity (or a single policy for a set of identities, see below), you can either run this tool against exported CSV files from the Lacework console, or provide the ARN(s) of target identity(s) directly on the command line (requires Lacework API credentials)
 
+### Unknown Usage Actions
+
+Lacework ignores certain event types which are log heavy such as Lambda invocations and S3 reads.  By default if these actions exist in the entitlements for a given identity, they are added to the policy. This behavior can be controlled with the `--(no-)include-unknown-actions` CLI flag.
+
+The full list of actions for which usage is unknown is in [data_events.py](./data_events.py).
+
+
 ### Using with CSV files
 
 Export CSV files from Lacework console to a local path
@@ -325,10 +332,13 @@ optional arguments:
   --maxchars MAXCHARS   Maximum size of a policy (does not count whitespace)
   --split {fewest-policies,by-service,none}
                         How to handle splitting large datasets. Default is 'fewest-policies'
+  --include-unknown-actions, --no-include-unknown-actions
+                        Include actions not recorded by Lacework (default: True)
 
 Examples:
 generate-policy.py arn:aws:iam:123456::role/some-role
 generate-policy.py arn:aws:iam:123456::role/some-role arn:aws:123456::role/some-other-role
 generate-policy.py /path/to/some.csv /path/to/some-other.csv
 generate-policy.py arn:aws:iam:123456::role/some-role --split=by-service
+generate-policy.py arn:aws:iam:123456::role/some-role --no-include-unknown-actions
 ```
