@@ -16,10 +16,15 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from laceworksdk import LaceworkClient
 
+# list of AWS API events lacework does not store. This is not available through LQL
+from data_events import data_events
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+
 
 def total_quantity(item):
     return sum(len(sublist) for sublist in item.values())
@@ -65,7 +70,6 @@ def query_lacework(lacework_client, arn):
             }
             filter {
                 PRINCIPAL_ID = '%s'
-                and LAST_USED_TIME is not NULL
             }
             return distinct { 
                 SERVICE,
@@ -94,13 +98,14 @@ def parse_csv(filename):
         reader = csv.DictReader(file)
         for row in reader:
             if row['Used'] == '0:UNUSED':
-                continue
+                row['Used'] == None
             actions = json.loads(row['Actions'])
             for action in actions.keys():
                 entry = {
                     'SERVICE': row['Service name'],
                     'RESOURCE_ID': row['Resource'],
                     'ACTION': action,
+                    'LAST_USED_TIME': row['Used'],
                 }
                 csv_data.append(entry)
     return csv_data
@@ -190,6 +195,7 @@ generate-policy.py arn:aws:iam:123456::role/some-role --split=by-service
         """)
     parser.add_argument("--maxchars", type=int, help="Maximum size of a policy (does not count whitespace). Default is 6,000", default=6000)
     parser.add_argument("--split", type=str, help="How to handle splitting large datasets. Default is 'fewest-policies'", default='fewest-policies', choices=['fewest-policies', 'by-service', 'none'])
+    parser.add_argument('--include-unknown-actions', dest='include_unknown', type=bool, help="Include actions not recorded by Lacework", default=True, action=argparse.BooleanOptionalAction)
     parser.add_argument('sources', type=str, metavar='source', help="Specify source(s). Can be local CSV files exported from Lacework, or a list of ARNs to fetch from the Lacework API", action='store', nargs='+')
     args = parser.parse_args()
 
@@ -213,14 +219,34 @@ generate-policy.py arn:aws:iam:123456::role/some-role --split=by-service
 
     logger.info("Generating policy document(s)")
 
+    # filter out unused actions    
+    def used_or_unknown(entry):
+        global unknown_count
+        action = entry["ACTION"]
+        last_used = entry["LAST_USED_TIME"]
+        
+        if last_used is None:
+            is_data_event = action in data_events
+            unknown_count += 1 if is_data_event else 0
+            return args.include_unknown and is_data_event
+        else:
+            return True
+
+    unknown_count = 0
+    data = [x for x in data if used_or_unknown(x)]
+    
+    if unknown_count > 0 and args.include_unknown:
+        logger.info ("Found %i actions which usage is unkown. These will be included in the generated polic(ies)." % unknown_count)
+
     # Transform data into { service: { resource_id: [actions] } }
     # This helps us later when we need to assemble properly sized policy documents
     transformed_data = {}
+    
     for entry in data:
         resource_id = entry["RESOURCE_ID"]
         action = entry["ACTION"]
         service = entry["SERVICE"]
-
+        last_used = entry["LAST_USED_TIME"]
         if service not in transformed_data:
             transformed_data[service] = {}
         if resource_id not in transformed_data[service]:
@@ -241,3 +267,5 @@ generate-policy.py arn:aws:iam:123456::role/some-role --split=by-service
     
     logger.info('Generated %i policy documents' % len(policies))
     print(json.dumps(policies, indent=2))
+    if unknown_count > 0 and not args.include_unknown:
+        logger.warning ("Found %i actions which usage is unkown. These are not included in policy. Use --include-unknown-actions to change this behavior." % unknown_count)
