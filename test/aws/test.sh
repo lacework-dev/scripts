@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 #setup RDS example
 git clone https://github.com/terraform-aws-modules/terraform-aws-rds.git
 cd ./terraform-aws-rds/examples/complete-mysql
