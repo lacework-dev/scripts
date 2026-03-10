@@ -284,9 +284,8 @@ function calculateInventory {
   if [ -z "$regionsToScan" ]
   then
       # Regions to scan not set, get list from AWS
-      regionsToScan=$(getRegions)
+      regionsToScan=$(getRegions "$profile_string")
   fi
-
   for r in $regionsToScan; do
     if [[ $PRINT_CSV_DETAILS == "true" ]]
     then
