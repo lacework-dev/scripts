@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Define the CSV file to save findings
+csv_file="findings.csv"
+
+# Write CSV header
+echo "subaccount,hostname,internalIp,InstanceId,severity,status,vulnId" > "$csv_file"
+
+# Get the list of sub-accounts
+sub_accounts=$(lacework account list | tail -n +3)
+
+# Loop through each sub-account and run the command
+while read -r sub_account; do
+  # Trim leading and trailing whitespace
+  sub_account=$(echo $sub_account | xargs)
+  if [[ -n "$sub_account" ]]; then
+    echo "Running command for sub-account: $sub_account"
+    json_output=$(lacework vulnerability host list-hosts CVE-2024-6387 --subaccount "$sub_account" --json)
+    
+    if [[ "$json_output" != "null" ]]; then
+      # Extract data using jq and append to CSV
+      echo "$json_output" | jq -r --arg subaccount "$sub_account" '.[] | "\($subaccount),\(.machineTags.Hostname),\(.machineTags.InternalIp),\(.machineTags.InstanceId),\(.severity),\(.status),\(.vulnId)"' >> "$csv_file"
+    fi
+  fi
+done <<< "$sub_accounts"
+
+echo "Findings have been saved to $csv_file"
